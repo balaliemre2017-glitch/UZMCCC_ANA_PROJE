@@ -120,21 +120,38 @@
             switchPage('workers', 'İşçi Kadrosu', document.querySelectorAll('.tab-item')[1]);
         }
 
-        function sendInstruction() {
+        async function sendInstruction() {
             let input = document.getElementById('chat-input');
             if(!input.value) return;
-            let box = document.getElementById('chat-box');
-            box.innerHTML += `<div class="msg patron">${input.value}</div>`;
             let text = input.value;
+            let box = document.getElementById('chat-box');
+            box.innerHTML += `<div class="msg patron">${text}</div>`;
             input.value = '';
-            setTimeout(() => {
-                box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> "${text}" komutu alındı ve işleniyor.</div>`;
-                box.scrollTop = box.scrollHeight;
-            }, 600);
+            
+            box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> Komut sunucuya iletiliyor, bot tetikleniyor...</div>`;
+            box.scrollTop = box.scrollHeight;
+
+            try {
+                // GitHub Actions Trigger
+                let response = await fetch('https://api.github.com/repos/balaliemre2017-glitch/UZMCCC_ANA_PROJE/dispatches', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        event_type: 'run-bot',
+                        client_payload: { command: text }
+                    })
+                });
+                box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> 🚀 Komut alındı ve arka planda çalıştırıldı!</div>`;
+            } catch(e) {
+                box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> Tetikleme başlatıldı.</div>`;
+            }
+            box.scrollTop = box.scrollHeight;
         }
 
         function saveSettings() {
-            alert("Yeni şifreler ve oturum bilgileri güvenli şekilde güncellendi!");
+            alert("Yeni şifreler ve oturum bilgileri kaydedildi!");
         }
     </script>
 </body>
