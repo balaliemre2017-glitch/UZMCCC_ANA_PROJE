@@ -1,15 +1,17 @@
 name: Otomatik Sosyal Medya Botu
 
 on:
+  repository_dispatch:
+    types: [run_command]
+  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # Her 6 saatte bir otomatik çalışır
-  workflow_dispatch: # Elle çalıştır butonu
+    - cron: '0 9,18 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Kodu Çek
+      - name: Kodu Cek
         uses: actions/checkout@v3
 
       - name: Python Kur
@@ -17,18 +19,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Bağımlılıkları Yükle
+      - name: Bagimliliklari Yukle
         run: |
           python -m pip install --upgrade pip
-          if [ -f gereksinimler.txt ]; then pip install -r gereksinimler.txt; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Botu Çalıştır
-        run: python ana.py
-
-      - name: Hafızayı Kaydet (Meta Unutmasın Diye)
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add . || true
-          git commit -m "Hafiza guncellendi [auto]" || true
-          git push
+      - name: Botu Calistir
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
+          INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+          TIKTOK_SESSION_ID: ${{ secrets.TIKTOK_SESSION_ID }}
+        run: python main.py
