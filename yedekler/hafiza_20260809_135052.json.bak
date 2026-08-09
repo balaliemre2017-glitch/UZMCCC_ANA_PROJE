@@ -1,0 +1,20 @@
+{
+  "gecmis": [
+    {
+      "emir": "cizgileri kirmizi yap"
+    },
+    {
+      "emir": "çizgileri mavi yap"
+    },
+    {
+      "emir": "ILK GIRIS MASTER OLDU: balaliemre2017@gmail.com"
+    },
+    {
+      "emir": "giris: balaliemre2017@gmail.com"
+    }
+  ],
+  "master_email": "balaliemre2017@gmail.com",
+  "son_giris": {
+    "email": "balaliemre2017@gmail.com"
+  }
+}

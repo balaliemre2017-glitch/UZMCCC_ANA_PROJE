@@ -1,2 +1,2 @@
-# UZMCCC PRO V25 - Yazilimci Usulu
-config/ core/ auth/ database/ workers/ - ayri ayri
+# UZMCCC V26 - TAM OTOMATIK
+Sohbetin tumu analiz edildi

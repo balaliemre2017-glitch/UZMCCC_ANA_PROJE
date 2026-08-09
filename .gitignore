@@ -1,6 +1,5 @@
-yedekler/
-uploads/
-klonlar/
+yedekler/*.db
+uploads/*
+cikti/*
 __pycache__/
-*.db
-API_ANAHTARLAR.env
+*.pyc
