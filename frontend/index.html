@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>UZMCCC PRO</title>
+<style>body{background:#0a0a0a;color:#fff;font-family:Arial;padding:20px}input{width:95%;padding:12px;background:#1a1a1a;color:#0f0;border:1px solid #333;border-radius:6px}button{width:95%;padding:15px;background:#0f0;color:#000;font-weight:bold;margin-top:10px;cursor:pointer;border:0;border-radius:8px;font-size:16px}#log{background:#000;color:#0f0;padding:15px;margin-top:20px;white-space:pre-wrap;border:1px solid #222;min-height:60px}</style>
+</head><body>
+<h1 style=color:#0f0>UZMCCC PRO PANEL - 6 İŞÇİ</h1>
+<form id=f><input name=video placeholder="Video yolu" value="C:/videolar/karinca_384.mp4"><br><br><input name=fikir placeholder="Fikir" value="bugün karıncalar grevde"><br><br><label style="display:flex;justify-content:space-between"><span>GİZLİ MOD</span><input type=checkbox name=gizli checked style="width:auto"></label><br><button type=submit>ÇALIŞTIR!</button></form>
+<pre id=log>Hazır... 6 işçi bekliyor</pre>
+<script>
+f=document.getElementById('f');log=document.getElementById('log');
+f.onsubmit=async(e)=>{e.preventDefault();log.textContent='Çalışıyor...';let r=await fetch('/calistir',{method:'POST',body:new FormData(f)});let j=await r.json();log.textContent=j.mesaj}
+</script>
+</body></html>

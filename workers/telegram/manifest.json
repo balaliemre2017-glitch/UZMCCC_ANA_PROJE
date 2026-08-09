@@ -1,0 +1,11 @@
+{
+  "isim": "telegram",
+  "yetenekler": {
+    "video_paylas": true,
+    "foto_paylas": true,
+    "gonderi": true,
+    "topluluk": true
+  },
+  "aktif": true,
+  "giris_tipi": "numara"
+}

@@ -1,0 +1,9 @@
+{
+  "isim": "canva",
+  "yetenekler": {
+    "foto_paylas": true,
+    "kapak": true
+  },
+  "aktif": true,
+  "giris_tipi": "email"
+}

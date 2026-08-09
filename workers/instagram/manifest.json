@@ -1,0 +1,11 @@
+{
+  "isim": "instagram",
+  "yetenekler": {
+    "video_paylas": true,
+    "foto_paylas": true,
+    "reels": true,
+    "hikaye": true
+  },
+  "aktif": true,
+  "giris_tipi": "email"
+}

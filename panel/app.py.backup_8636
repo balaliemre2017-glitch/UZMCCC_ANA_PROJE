@@ -1,0 +1,240 @@
+
+from flask import Flask, request, redirect
+import pathlib, json, os
+from werkzeug.utils import secure_filename
+app=Flask(__name__)
+BASE=pathlib.Path(__file__).parent.parent
+AUTH=BASE/'yedekler'/'auth.json'
+LOG=BASE/'yedekler'/'paylasim_log.json'
+ENV=BASE/'API_ANAHTARLAR.env'
+HAFIZA=BASE/'yedekler'/'hafiza.json'
+HAFIZA2=BASE/'HAFIZA.json'
+UPLOAD=BASE/'uploads'
+DB=BASE/'app'/'uzmccc.db'
+UPLOAD.mkdir(parents=True, exist_ok=True)
+
+def load_env():
+    d={}
+    if ENV.exists():
+        for l in ENV.read_text(encoding='utf-8', errors='ignore').splitlines():
+            if '=' in l and not l.strip().startswith('#'):
+                try:
+                    k,v=l.split('=',1)
+                    d[k.strip()]=v.strip()
+                except: pass
+    return d
+
+def save_env(new_d):
+    # KALICI: eskiyi silme, ustune ekle
+    old=load_env()
+    # bos gelenleri eskiyi silme
+    for k,v in new_d.items():
+        if v and v.strip():
+            old[k]=v.strip()
+    ENV.parent.mkdir(parents=True, exist_ok=True)
+    ENV.write_text('\n'.join([f"{k}={v}" for k,v in old.items()])+'\n', encoding='utf-8')
+
+def load_auth():
+    # KALICI: yedekler/auth.json tek kaynak
+    if AUTH.exists():
+        try:
+            return json.loads(AUTH.read_text(encoding='utf-8'))
+        except:
+            return {}
+    return {}
+
+def save_auth(new_data):
+    # KALICI: ustune ekle, silme!
+    old=load_auth()
+    # deep merge for master
+    if 'master' in new_data and 'master' in old:
+        old['master']={**old['master'], **new_data['master']}
+        del new_data['master']
+    old.update(new_data)
+    AUTH.parent.mkdir(parents=True, exist_ok=True)
+    AUTH.write_text(json.dumps(old, indent=2, ensure_ascii=False), encoding='utf-8')
+
+def load_hafiza():
+    # Iki yerden dene - hangisi varsa
+    for p in [HAFIZA, HAFIZA2, BASE/'yedekler'/'hafiza.json']:
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding='utf-8'))
+            except: pass
+    return {"faz":"FAZ 1 KURUCU TAMAMLANDI","gecmis":[],"youtube":"ON"}
+
+def save_hafiza(ek_gecmis=None):
+    h=load_hafiza()
+    if ek_gecmis:
+        if 'gecmis' not in h: h['gecmis']=[]
+        h['gecmis'].append(ek_gecmis)
+    HAFIZA.parent.mkdir(parents=True, exist_ok=True)
+    HAFIZA.write_text(json.dumps(h, indent=2, ensure_ascii=False), encoding='utf-8')
+    # Ayni zamanda kok HAFIZA.json'a da yaz - cift yedek
+    HAFIZA2.write_text(json.dumps(h, indent=2, ensure_ascii=False), encoding='utf-8')
+
+@app.route('/')
+def idx():
+    env=load_env()
+    auth=load_auth()
+    hafiza=load_hafiza()
+    master=auth.get('master',{})
+    email=master.get('email','') or hafiza.get('master','balaliemre2017@gmail.com')
+    phone=master.get('phone','')
+    
+    # LOG
+    log_text="Henuz yok"
+    if LOG.exists():
+        try:
+            data=json.loads(LOG.read_text(encoding='utf-8'))
+            log_text="\n".join([f"{x['tarih'][11:19]} {x['platform']} {x['durum'][:70]}" for x in data[-15:][::-1]])
+        except: pass
+    
+    # Uploads
+    vlist=""
+    if UPLOAD.exists():
+        for f in sorted(UPLOAD.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True)[:6]:
+            if f.is_file():
+                vlist+=f"{f.name}\n"
+    if not vlist: vlist="Bos"
+    
+    # Tum isciler
+    isciler=[]
+    for plat_dir in (BASE/'workers').iterdir() if (BASE/'workers').exists() else []:
+        if plat_dir.is_dir():
+            isciler.append(plat_dir.name)
+    
+    # Kayitli kullanicilar - auth.json'dan
+    kayitli=[]
+    for k,v in auth.items():
+        if k!='master' and isinstance(v, dict):
+            kayitli.append(f"{k}: {v.get('username','') or v.get('email','')}")
+
+    return f"""<html><head><meta charset="utf-8"><style>
+body{{background:#0a0a0a;color:#0f0;font-family:Consolas;padding:12px}}
+.box{{border:1px solid #0f0;background:#111;padding:12px;margin:8px 0;border-radius:8px}}
+.boxyt{{border:2px solid #f00;background:#1a0000;padding:12px;margin:8px 0;border-radius:8px}}
+.boxold{{border:2px solid #0ff;background:#001a22;padding:12px;margin:8px 0;border-radius:8px}}
+.boxwarn{{border:2px solid #fa0;background:#221100;padding:12px;margin:8px 0;border-radius:8px}}
+.btn{{background:#0f0;color:#000;font-weight:bold;padding:10px 16px;border:0;cursor:pointer;border-radius:4px}}
+.btnyt{{background:#f00;color:#fff;font-weight:bold;padding:10px 16px;border:0;cursor:pointer;border-radius:4px}}
+input,textarea{{width:96%;background:#000;color:#0f0;border:1px solid #0f0;padding:8px;margin:4px 0;border-radius:4px}}
+pre{{background:#000;border:1px dashed #0f0;padding:8px;white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto}}
+.isci{{display:inline-block;border:1px solid #0f0;padding:5px 8px;margin:3px;border-radius:6px;background:#002200;font-size:11px}}
+</style></head><body>
+<h2>UZMCCC V21 - KALICI HAFIZA - BIR DAHA SILINMEZ ✅</h2>
+
+<div class=boxold>
+<b>✅ KALICI HAFIZA AKTIF - HERSEY yedekler/ KLASORUNDE</b><br>
+FAZ: {hafiza.get('faz','')} | Master: {email}<br>
+Kayitli Isciler: {len(isciler)} tane - {', '.join(isciler[:8])}<br>
+Gecmis Emirler: {len(hafiza.get('gecmis',[]))} tane<br>
+ENV Keys: {', '.join(env.keys())} - GEMINI: {'✅ VAR' if env.get('GEMINI_API_KEY') else '❌ YOK'} YT: {'✅ VAR' if env.get('YOUTUBE_API_KEY') else '❌ YOK'}<br>
+Auth Kayitlari: {', '.join(kayitli[:5]) if kayitli else 'sadece master'}<br>
+DB: {DB.exists()} | yedekler/: {HAFIZA.exists()} {AUTH.exists()}<br>
+<b>BU DOSYALAR ZIP ILE SILINMEZ - KALICI!</b>
+</div>
+
+<div class=boxwarn>
+<b>🔐 KULLANICI GIRISLERI - Kalici hafizada, silinmez</b><br>
+<form method=POST action="/save_master">
+Master Email (tum isciler bunu kullanir):<br><input name=email value="{email}"><br>
+Sifre (bos birakirsan eski korunur):<br><input name=password type=password placeholder="bos = eski korunur"><br>
+Telefon:<br><input name=phone value="{phone}"><br>
+<button class=btn>KAYDET - KALICI HAFIZAYA (yedekler/auth.json)</button>
+</form>
+<pre>Kayit yeri: yedekler/auth.json - ZIP acilmasinda silinmez!
+Icerik: {str(auth)[:300]}...</pre>
+</div>
+
+<div class=box>
+<b>API KEYLER - Kalici (API_ANAHTARLAR.env)</b>
+<form method=POST action="/save_keys">
+YOUTUBE_API_KEY:<br><input name=YOUTUBE_API_KEY value="{env.get('YOUTUBE_API_KEY','')}" style="border-color:#f00"><br>
+GEMINI_API_KEY:<br><input name=GEMINI_API_KEY value="{env.get('GEMINI_API_KEY','')}" style="border-color:#0ff"><br>
+ELEVENLABS:<br><input name=ELEVENLABS_API_KEY value="{env.get('ELEVENLABS_API_KEY','')}"><br>
+<button class=btn>KEYLERI KALICI KAYDET - SILINMEZ</button>
+</form>
+</div>
+
+<div class=boxyt>
+<b>🔴 YOUTUBE VIDEO YUKLE - Kalici hafiza ile entegre</b>
+<form method=POST action="/upload" enctype="multipart/form-data">
+Video/Foto:<br><input type=file name=foto accept="video/*,image/*" required><br>
+Baslik (youtube, instagram sec):<br><textarea name=emir>youtubedan paylas - {hafiza.get('faz','')} - kalici test</textarea><br>
+<button class=btnyt>YUKLE - {email} ile (kalici hafiza)</button>
+</form>
+</div>
+
+<div class=box><b>Isciler - {email} ile SSO - Kalici</b><br>
+"""
+    for p in isciler[:12]:
+        html+=f'<div class=isci>{p.upper()} ✅</div>'
+    html+=f"""</div>
+<div class=box><b>Uploads (kalici)</b><pre>{vlist}</pre></div>
+<div class=box><b>LOG (yedekler/paylasim_log.json - kalici)</b><pre style="border-color:#f00">{log_text}</pre></div>
+<div class=box><b>Hafiza gecmisi (yedekler/hafiza.json - kalici)</b><pre>{str(hafiza.get('gecmis',[])[-3:])[:400]}</pre></div>
+</body></html>"""
+
+@app.route('/save_master', methods=['POST'])
+def save_master():
+    email=request.form.get('email','').strip()
+    pw=request.form.get('password','').strip()
+    phone=request.form.get('phone','').strip()
+    data={}
+    if 'master' not in load_auth():
+        data['master']={}
+    else:
+        data['master']=load_auth()['master']
+    if email: data['master']['email']=email
+    if pw: data['master']['password']=pw
+    if phone: data['master']['phone']=phone
+    save_auth({'master': data['master']})
+    # Tum isciler icin de username guncelle - eskiyi koruyarak
+    auth=load_auth()
+    for plat in ["youtube","instagram","tiktok","facebook","twitter_x","canva","capcut"]:
+        if plat not in auth: auth[plat]={}
+        if email: auth[plat]['username']=email
+    # dogrudan yaz - merge mantigi zaten save_auth icinde var ama burada hepsi icin
+    AUTH.write_text(json.dumps(auth, indent=2, ensure_ascii=False), encoding='utf-8')
+    save_hafiza({"emir": f"giris guncellendi: {email}"})
+    return redirect('/')
+
+@app.route('/save_keys', methods=['POST'])
+def save_keys():
+    new={}
+    for k in ['YOUTUBE_API_KEY','GEMINI_API_KEY','ELEVENLABS_API_KEY','OPENAI_API_KEY','TIKTOK_TOKEN','INSTAGRAM_TOKEN']:
+        v=request.form.get(k,'').strip()
+        if v:
+            new[k]=v
+    save_env(new)
+    save_hafiza({"emir": f"key guncellendi: {list(new.keys())}"})
+    return redirect('/')
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    try:
+        import datetime, json
+        foto=request.files.get('foto')
+        if not foto: return redirect('/')
+        from werkzeug.utils import secure_filename
+        filename=secure_filename(foto.filename)
+        ts=datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        save_path=UPLOAD/f"{ts}_{filename}"
+        foto.save(str(save_path))
+        LOG.parent.mkdir(parents=True, exist_ok=True)
+        data=[]
+        if LOG.exists():
+            try: data=json.loads(LOG.read_text(encoding='utf-8'))
+            except: data=[]
+        data.append({'platform':'youtube','dosya':str(save_path),'aciklama':request.form.get('emir',''),'durum':f'KALICI OK - {save_path.name} - {load_auth().get("master",{}).get("email","")}','tarih':datetime.datetime.now().isoformat()})
+        LOG.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
+        save_hafiza({"emir": request.form.get('emir',''), "dosya": str(save_path)})
+    except Exception as e:
+        print(e)
+        import traceback; traceback.print_exc()
+    return redirect('/')
+
+if __name__=='__main__':
+    print("V21 KALICI HAFIZA - http://127.0.0.1:5000 - BIR DAHA SILINMEZ!")
+    app.run(host='0.0.0.0', port=5000, debug=False)

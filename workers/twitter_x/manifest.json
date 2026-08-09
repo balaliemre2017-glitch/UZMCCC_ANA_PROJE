@@ -1,0 +1,10 @@
+{
+  "isim": "twitter_x",
+  "yetenekler": {
+    "video_paylas": true,
+    "foto_paylas": true,
+    "gonderi": true
+  },
+  "aktif": true,
+  "giris_tipi": "email"
+}

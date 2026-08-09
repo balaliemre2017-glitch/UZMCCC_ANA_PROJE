@@ -1,0 +1,9 @@
+{
+  "isim": "tiktok",
+  "yetenekler": {
+    "video_paylas": true,
+    "foto_paylas": true
+  },
+  "aktif": true,
+  "giris_tipi": "email"
+}
