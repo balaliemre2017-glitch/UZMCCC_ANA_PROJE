@@ -50,3 +50,4 @@ class InstagramWorker:
 if __name__ == "__main__":
     worker = InstagramWorker()
     worker.run()
+InstagramWorker().run()
