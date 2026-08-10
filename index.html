@@ -12,6 +12,7 @@
             --text: #f8fafc;
             --text-muted: #94a3b8;
             --success: #22c55e;
+            --error: #ef4444;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text); padding-bottom: 70px; }
@@ -26,14 +27,15 @@
         .worker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
         .worker-card { background: #0f172a; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #334155; }
         .worker-card.active { border-color: var(--success); }
-        .chat-box { height: 300px; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid #334155; }
-        .msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; }
-        .msg.patron { background: var(--accent); color: #000; align-self: flex-end; }
-        .msg.worker { background: var(--card-bg); color: var(--text); align-self: flex-start; border: 1px solid #334155; }
-        input, select, textarea, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: var(--text); }
-        button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none; }
-        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #334155; }
-        .tab-item { text-align: center; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; }
+        .chat-box { height: 320px; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid #334155; }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; }
+        .msg.patron { background: var(--accent); color: #000; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg.worker { background: var(--card-bg); color: var(--text); align-self: flex-start; border: 1px solid #334155; border-bottom-left-radius: 2px; }
+        input, select, textarea, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: var(--text); box-sizing: border-box; }
+        button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #334155; z-index: 100; }
+        .tab-item { text-align: center; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; width: 25%; }
         .tab-item.active { color: var(--accent); font-weight: bold; }
     </style>
 </head>
@@ -41,64 +43,74 @@
 
     <div class="navbar">
         <h1 id="page-title">Projelerim</h1>
-        <span class="status-badge" id="global-status">Sistem Aktif</span>
+        <span class="status-badge" id="global-status">Otonom Sistem Aktif</span>
     </div>
 
+    <!-- 1. PROJELER SAYFASI -->
     <div id="page-projects" class="page active">
-        <div class="card" onclick="openProject('AI Sanatçı')">
+        <div class="card" onclick="selectProject('music_project', 'AI Sanatçı Projesi')">
             <div class="card-header">
                 <span class="card-title">🎵 AI Sanatçı Projesi</span>
-                <span class="status-badge">4 İşçi Aktif</span>
+                <span class="status-badge">Aktif Proje</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Gizlilik %100 • Havalı Üslup • TikTok/YouTube/Reels</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Müzik & Klip • Havalı / Mizahi Üslup • TikTok / Instagram / Shorts</p>
         </div>
-        <div class="card" onclick="openProject('Toptancı Şirketi')">
+        <div class="card" onclick="selectProject('e_commerce', 'Domates/Biber Toptancılığı')">
             <div class="card-header">
                 <span class="card-title">🍅 Domates/Biber Toptancılığı</span>
-                <span class="status-badge">3 İşçi Aktif</span>
+                <span class="status-badge" style="color: var(--text-muted); background: rgba(255,255,255,0.1);">Hazırda</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Şirket Profili • İlan Otomasyonu • WhatsApp/FB</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Şirket Profili • İlan Otomasyonu • WhatsApp / Facebook</p>
         </div>
     </div>
 
+    <!-- 2. İŞÇİ KADROSU SAYFASI -->
     <div id="page-workers" class="page">
-        <h3 id="current-project-name" style="margin-bottom: 12px;">Seçili Proje: AI Sanatçı</h3>
+        <h3 id="current-project-name" style="margin-bottom: 12px; color: var(--accent);">Seçili Proje: AI Sanatçı Projesi</h3>
         <div class="worker-grid">
             <div class="worker-card active"><p><b>Instagram</b></p><span class="status-badge">Bağlı</span></div>
             <div class="worker-card active"><p><b>YouTube</b></p><span class="status-badge">Bağlı</span></div>
             <div class="worker-card active"><p><b>TikTok</b></p><span class="status-badge">Bağlı</span></div>
-            <div class="worker-card"><p><b>WhatsApp</b></p><button onclick="alert('WhatsApp Bağlanıyor...')">Giriş Yap</button></div>
+            <div class="worker-card active"><p><b>Canva / CapCut</b></p><span class="status-badge">Hazır</span></div>
         </div>
     </div>
 
+    <!-- 3. KOMUT VE CHAT ODASI -->
     <div id="page-chat" class="page">
         <div class="chat-box" id="chat-box">
-            <div class="msg worker"><b>Patron Beyni:</b> Hoş geldin patron! Tüm işçiler komut bekliyor.</div>
+            <div class="msg worker"><b>Patron Beyni:</b> Hoş geldin patron! Emirlerini bekliyorum. Neler yapalım?</div>
         </div>
         <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <input type="text" id="chat-input" placeholder="Kural veya komut ver...">
-            <button style="width: 80px;" onclick="sendInstruction()">Gönder</button>
+            <input type="text" id="chat-input" placeholder="Örn: Yeni klip paylaş, komik 3 yoruma cevap ver...">
+            <button style="width: 90px;" onclick="sendInstruction()">Gönder</button>
         </div>
     </div>
 
+    <!-- 4. HESAP AYARLARI VE TOKEN -->
     <div id="page-settings" class="page">
-        <h3>Hesap Ayarları & Otomatik Şifre</h3>
-        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">Değişen bilgilerinizi buradan güncelleyebilirsiniz:</p>
+        <h3>Hesap Ayarları & Güvenlik</h3>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">GitHub ve Sosyal Medya Erişim Bilgileri:</p>
         
+        <div class="card">
+            <h4>GitHub Token (PAT)</h4>
+            <input type="password" id="gh-token-input" placeholder="ghp_... Token yapıştırın">
+        </div>
+
         <div class="card">
             <h4>Instagram Giriş Bilgileri</h4>
             <input type="text" id="ig-user" placeholder="Instagram Kullanıcı Adı">
-            <input type="password" id="ig-pass" placeholder="Instagram Yeni Şifre">
+            <input type="password" id="ig-pass" placeholder="Instagram Şifre">
         </div>
 
         <div class="card">
             <h4>TikTok Oturum Kodu (Session ID)</h4>
-            <input type="password" id="tt-session" placeholder="TikTok Session ID kopyala-yapıştır">
+            <input type="password" id="tt-session" placeholder="TikTok Session ID">
         </div>
 
-        <button onclick="saveSettings()">Tüm Bilgileri Kaydet ve Botu Güncelle</button>
+        <button onclick="saveSettings()">Tüm Bilgileri Kaydet</button>
     </div>
 
+    <!-- ALT TAB MENÜSÜ -->
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchPage('projects', 'Projelerim', this)"><div>📁</div>Projeler</div>
         <div class="tab-item" onclick="switchPage('workers', 'İşçi Kadrosu', this)"><div>🤖</div>İşçiler</div>
@@ -107,6 +119,24 @@
     </div>
 
     <script>
+        const GITHUB_USER = "balaliemre2017-glitch";
+        const GITHUB_REPO = "UZMCCC_ANA_PROJE";
+        let activeProjectType = "music_project";
+
+        // Sayfa Başlatıcı
+        window.onload = function() {
+            // URL Parametresinden Token Yakalama
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('token')) {
+                localStorage.setItem('GH_PAT', urlParams.get('token'));
+            }
+            
+            const savedToken = localStorage.getItem('GH_PAT');
+            if (savedToken) {
+                document.getElementById('gh-token-input').value = savedToken;
+            }
+        };
+
         function switchPage(pageId, title, element) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -115,49 +145,72 @@
             element.classList.add('active');
         }
 
-        function openProject(projectName) {
-            document.getElementById('current-project-name').innerText = "Seçili Proje: " + projectName;
-            switchPage('workers', 'İşçi Kadrosu', document.querySelectorAll('.tab-item')[1]);
+        function selectProject(projKey, projTitle) {
+            activeProjectType = projKey;
+            document.getElementById('current-project-name').innerText = "Seçili Proje: " + projTitle;
+            alert("Aktif Proje Değiştirildi: " + projTitle);
+            switchPage('chat', 'Komut Odası', document.querySelectorAll('.tab-item')[2]);
         }
 
         async function sendInstruction() {
-    let input = document.getElementById('chat-input');
-    if(!input.value) return;
-    let text = input.value;
-    let box = document.getElementById('chat-box');
-    box.innerHTML += `<div class="msg patron">${text}</div>`;
-    input.value = '';
-    
-    box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> Komut işleniyor, bot tetikleniyor...</div>`;
-    box.scrollTop = box.scrollHeight;
+            let input = document.getElementById('chat-input');
+            let text = input.value.trim();
+            if(!text) return;
+            
+            let box = document.getElementById('chat-box');
+            box.innerHTML += `<div class="msg patron">${text}</div>`;
+            input.value = '';
+            
+            box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> Emir alındı, GitHub Actions tetikleniyor...</div>`;
+            box.scrollTop = box.scrollHeight;
 
-    let pat = localStorage.getItem('GH_PAT') || prompt("Lütfen GH_PAT Token girin (Tek seferlik):");
-    if(pat) localStorage.setItem('GH_PAT', pat);
+            let pat = localStorage.getItem('GH_PAT') || document.getElementById('gh-token-input').value.trim();
+            if(!pat) {
+                pat = prompt("Lütfen GitHub Personal Access Token (PAT) girin:");
+                if(pat) localStorage.setItem('GH_PAT', pat);
+            }
 
-    try {
-        let response = await fetch('https://api.github.com/repos/balaliemre2017-glitch/UZMCCC_ANA_PROJE/dispatches', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': 'token ' + pat
-            },
-            body: JSON.stringify({
-                event_type: 'run-bot',
-                client_payload: { command: text }
-            })
-        });
-        if(response.ok) {
-            box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> 🚀 İşçi görevi aldı, çalışmaya başladı!</div>`;
-        } else {
-            box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> ❌ Tetikleme hatası! Token kontrol edin.</div>`;
+            if(!pat) {
+                box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Token bulunamadı. Lütfen Ayarlar sekmesinden ekleyin.</div>`;
+                return;
+            }
+
+            try {
+                let response = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Authorization': 'token ' + pat,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        event_type: 'patron_cmd',
+                        client_payload: { 
+                            command: text,
+                            project_type: activeProjectType
+                        }
+                    })
+                });
+
+                if(response.ok || response.status === 204) {
+                    box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> 🚀 İşçiler emri aldı! Paylaşım ve etkileşim motoru çalışıyor.</div>`;
+                } else {
+                    box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Tetikleme başarısız! Token yetkisini kontrol edin.</div>`;
+                }
+            } catch(e) {
+                box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Bağlantı kurulamadı: ${e.message}</div>`;
+            }
+            box.scrollTop = box.scrollHeight;
         }
-    } catch(e) {
-        box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> Bağlantı hatası oluştu.</div>`;
-    }
-    box.scrollTop = box.scrollHeight;
-}
+
         function saveSettings() {
-            alert("Yeni şifreler ve oturum bilgileri kaydedildi!");
+            let token = document.getElementById('gh-token-input').value.trim();
+            if(token) {
+                localStorage.setItem('GH_PAT', token);
+                alert("GitHub Token ve hesap bilgileri hafızaya kaydedildi! Artık tek tıkla emrini verebilirsin.");
+            } else {
+                alert("Lütfen geçerli bir Token girin.");
+            }
         }
     </script>
 </body>
