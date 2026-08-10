@@ -30,4 +30,4 @@ jobs:
           INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
           TIKTOK_SESSION_ID: ${{ secrets.TIKTOK_SESSION_ID }}
-        run: PYTHONPATH=. python main.py
+        run: python main.py
