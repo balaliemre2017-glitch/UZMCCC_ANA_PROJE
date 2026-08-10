@@ -18,7 +18,7 @@ if PROXY:
         print(f"[!] Proxy yükleme hatası: {e}")
 
 # =========================================================
-# 2. DİNAMİK DİZİN YAPILANMASI (Tüm Zip Yolları Dahil)
+# 2. DİNAMİK DİZİN YAPILANMASI (Tüm Zip ve İç İçe Yollar Dahil)
 # =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -53,8 +53,19 @@ for b_path in ["brain", "core.brain", "core.core.brain", "core.patron_beyni", "p
         pass
 
 # =========================================================
-# 4. WORKER YÜKLEYİCİ VE YETENEK ÇAĞIRICI
+# 4. DİNAMİK HİYERARŞİ VE İŞÇİ YÜKLEYİCİ MERKEZİ
 # =========================================================
+hierarchy_mod = None
+try:
+    from core.hierarchy import CompanyHierarchy
+    hierarchy_mod = CompanyHierarchy
+except Exception:
+    try:
+        from core.core.hierarchy import CompanyHierarchy
+        hierarchy_mod = CompanyHierarchy
+    except Exception:
+        pass
+
 def load_worker(folder_name, class_name):
     paths = [
         f"workers.{folder_name}.worker",
@@ -74,9 +85,8 @@ def load_worker(folder_name, class_name):
 
 def execute_intent_on_worker(w_instance, target_action, parameters, command, pipeline_data):
     """
-    Gemini Beyninin karar verdiği eylemi (target_action) ilgili işçide dinamik olarak çalıştırır.
+    Gemini Beyninin karar verdiği eylemi ilgili işçide dinamik ve hatasız çalıştırır.
     """
-    # 1. Tam Eşleşen Metod Varsa Doğrudan Çalıştır (Örn: update_profile_pic, edit_profile, update_bio)
     if hasattr(w_instance, target_action):
         method = getattr(w_instance, target_action)
         try:
@@ -84,7 +94,6 @@ def execute_intent_on_worker(w_instance, target_action, parameters, command, pip
         except TypeError:
             return method(command)
 
-    # 2. Genel Metod Taraması
     action_map = {
         "UPDATE_BIO": ["update_bio", "edit_profile", "set_biography"],
         "CHANGE_AVATAR": ["change_profile_picture", "update_avatar", "set_profile_pic"],
@@ -103,21 +112,23 @@ def execute_intent_on_worker(w_instance, target_action, parameters, command, pip
                 except Exception:
                     pass
 
-    # 3. Hiçbiri Yoksa Varsayılan Run
     if hasattr(w_instance, 'run'):
         try:
             return w_instance.run(command=command, ai_plan=pipeline_data)
         except TypeError:
-            return w_instance.run()
+            try:
+                return w_instance.run(command)
+            except TypeError:
+                return w_instance.run()
 
     return None
 
 # =========================================================
-# 5. ANA OTONOM AJANS MOTORU
+# 5. MASTER OTONOM AJANS & HOLDİNG MOTORU
 # =========================================================
 def main():
     print("==================================================")
-    print("   UZMCCC V26 - AKILLI İŞÇİ & AI PATRON MERKEZİ   ")
+    print("   UZMCCC V26 - MASTER OTONOM HOLDİNG MERKEZİ     ")
     print("==================================================")
 
     event_path = os.environ.get("GITHUB_EVENT_PATH")
@@ -139,8 +150,33 @@ def main():
     print(f"\n[📁 AKTİF PROJE]: {project_type}")
     print(f"[👑 PATRON EMRİ]: {patron_emri}")
 
+    # Otomatik İşe Alım ve Hiyerarşi Taraması (Gelecekteki tüm yeni işçiler dahil)
+    company = None
+    hierarchy_workers = {}
+    if hierarchy_mod:
+        company = hierarchy_mod(brain=brain, memory_mgr=memory_mgr)
+        hierarchy_workers = company.auto_discover_and_hire()
+
+    cmd_lower = patron_emri.lower()
+
     # ---------------------------------------------------------
-    # GEMINI BEYNİ İLE NİYET VE HEDEF ANALİZİ (DOĞAL DİL ANLAMA)
+    # ÖZEL MOD: HAFTALIK PATRON EĞİTİMİ / TOPLANTI
+    # ---------------------------------------------------------
+    if any(k in cmd_lower for k in ["eğitim", "öğren", "ders", "toplantı"]):
+        print("\n[🎓 HAFTALIK PATRON EĞİTİMİ / TOPLANTI MODU AKTİF]")
+        target_found = False
+        if company:
+            for w_key in hierarchy_workers.keys():
+                if w_key in cmd_lower:
+                    company.conduct_training(w_key, patron_emri)
+                    target_found = True
+            if not target_found and hierarchy_workers:
+                first_key = list(hierarchy_workers.keys())[0]
+                company.conduct_training(first_key, patron_emri)
+        return
+
+    # ---------------------------------------------------------
+    # GEMINI BEYNİ İLE NİYET VE HEDEF ANALİZİ (DOĞAL DİL)
     # ---------------------------------------------------------
     print("\n[🧠 PATRON BEYNİ]: Komut analiz ediliyor ve işçilere görev dağıtılıyor...")
     
@@ -153,12 +189,10 @@ def main():
 
     if brain and hasattr(brain, "analyze_intent"):
         try:
-            # Gemini beyni emri doğrudan JSON formatında analiz eder
             intent_data = brain.analyze_intent(patron_emri, project_type)
         except Exception as e:
             print(f"[!] AI Analiz Hatası (Varsayılan Akışa Geçildi): {e}")
 
-    # Eski hafıza kayıt sistemi korunur
     if memory_mgr and hasattr(memory_mgr, "save_log"):
         try:
             memory_mgr.save_log(patron_emri, intent_data)
@@ -175,7 +209,7 @@ def main():
     active_filter = [w.strip() for w in active_workers_env.split(",") if w.strip()]
 
     # ---------------------------------------------------------
-    # 1. AŞAMA: PRODÜKSİYON (Sadece Medya Üretimi Gerekiyorsa)
+    # 1. AŞAMA: PRODÜKSİYON (Canva / CapCut)
     # ---------------------------------------------------------
     if intent_data.get("need_production", True):
         print("\n--- 1. AŞAMA: PRODÜKSİYON VE MEDYA HAZIRLIĞI ---")
@@ -198,9 +232,9 @@ def main():
                     print(f"[-] [{platform_title}] Hatası: {e}")
 
     # ---------------------------------------------------------
-    # 2. AŞAMA: SOSYAL MEDYA İŞÇİLERİ (İLGİLİ PLATFORMLAR)
+    # 2. AŞAMA: SOSYAL MEDYA İŞÇİLERİ & DİNAMİK UZMANLAR
     # ---------------------------------------------------------
-    print("\n--- 2. AŞAMA: PLATFORM İŞÇİLERİ EMİR İCRA EDİYOR ---")
+    print("\n--- 2. AŞAMA: PLATFORM İŞÇİLERİ VE UZMANLAR İŞ BAŞINDA ---")
     social_workers = [
         ("instagram", "InstagramWorker", "Instagram Uzmanı"),
         ("youtube", "YouTubeWorker", "YouTube Shorts Uzmanı"),
@@ -213,8 +247,8 @@ def main():
 
     target_workers_list = intent_data.get("target_workers", [])
 
+    # Standart Sosyal Medya İşçileri İcrası
     for folder, cls_name, platform_title in social_workers:
-        # Eğer aktif filtre varsa veya Gemini sadece belirli platformları hedeflediyse diğerlerini atla
         if active_filter and folder not in active_filter:
             continue
         if target_workers_list and folder not in target_workers_list:
@@ -236,8 +270,18 @@ def main():
             except Exception as e:
                 print(f"[-] [{platform_title}] Hatası: {e}")
 
+    # Hiyerarşi Üzerinden Otomatik Keşfedilen Diğer Uzmanlar (Güvenlik, Reklam vb.)
+    for w_key, w_obj in hierarchy_workers.items():
+        if w_key not in ["instagram", "youtube", "tiktok", "facebook", "telegram", "twitter_x", "whatsapp", "canva", "capcut"]:
+            try:
+                if hasattr(w_obj, "run"):
+                    w_obj.run(patron_emri)
+                print(f"[+] [Holding Uzmanı: {w_key}] Görev icra edildi.")
+            except Exception as e:
+                print(f"[-] [{w_key}] Hatası: {e}")
+
     print("\n==================================================")
-    print("   PATRONUN EMİR VE TALİMATLARI TAMAMLANTI ")
+    print("   PATRONUN EMİR VE TALİMATLARI TAMAMLANDI ")
     print("==================================================")
 
 if __name__ == "__main__":
