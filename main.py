@@ -1,13 +1,16 @@
 import sys
-sys.path.append('.')
-import json
+import os
 
-from core.memory import MemoryManager
-from core.brain import AIBrain
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
+sys.path.insert(0, os.path.join(current_dir, 'core'))
+
+import json
+from brain import AIBrain
+from memory import MemoryManager
 from workers.instagram_worker import InstagramWorker
 from workers.youtube_worker import YouTubeWorker
 from workers.tiktok_worker import TikTokWorker
-
 def main():
     # 1. Hafıza ve Beyin Yüklenir
     memory_mgr = MemoryManager()
