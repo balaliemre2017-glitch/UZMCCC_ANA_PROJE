@@ -2,7 +2,7 @@ import sys
 import os
 import json
 
-# Tüm derin/iç içe alt klasörleri dinamik olarak Python yoluna ekle
+# Tüm alt klasörleri dinamik olarak Python yoluna ekle
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
@@ -11,17 +11,30 @@ for root, dirs, files in os.walk(BASE_DIR):
         sys.path.insert(0, root)
 
 # Core Modülleri (Hafıza ve Beyin)
-try:
-    from brain import AIBrain
-except ImportError:
-    from core.brain import AIBrain
+brain = None
+memory_mgr = None
 
 try:
     from memory import MemoryManager
-except ImportError:
-    from core.memory import MemoryManager
+    memory_mgr = MemoryManager()
+except Exception as e:
+    try:
+        from core.memory import MemoryManager
+        memory_mgr = MemoryManager()
+    except Exception as e2:
+        print(f"[-] MemoryManager Yükleme Hatası: {e2}")
 
-# Worker Modülleri (Bütün Platformlar)
+try:
+    from brain import AIBrain
+    brain = AIBrain(memory_mgr=memory_mgr)
+except Exception as e:
+    try:
+        from core.brain import AIBrain
+        brain = AIBrain(memory_mgr=memory_mgr)
+    except Exception as e2:
+        print(f"[-] AIBrain Yükleme Hatası: {e2}")
+
+# Worker Modüllerini Dinamik Yükleme Fonksiyonu
 def dynamic_import(module_name, class_name):
     try:
         mod = __import__(module_name, fromlist=[class_name])
@@ -33,62 +46,51 @@ def main():
     print("==================================================")
     print("      UZMCCC V26 - TAM OTOMATİK BOT BAŞLATILDI    ")
     print("==================================================")
-    
-    # 1. Hafıza ve AI Beyin Kurulumu
-    memory_mgr = MemoryManager() if 'MemoryManager' in globals() else None
-    brain = AIBrain(memory_mgr) if 'AIBrain' in globals() else None
-    
-    # 2. Görev / Komut Okuma
-    event_path = os.environ.get("GITHUB_EVENT_PATH")
-    command = "Genel Durum Raporu ve Etkileşim Taraması"
-    
-    if event_path and os.path.exists(event_path):
-        try:
-            with open(event_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                command = data.get("client_payload", {}).get("command", command)
-        except Exception as e:
-            print(f"[Uyarı] Event okuma hatası: {e}")
-            
-    print(f"\n[GÖREV]: {command}")
-    
-    # 3. AI Karar ve Analiz Süreci
-    if brain and hasattr(brain, 'think'):
-        try:
-            ai_response = brain.think(command)
-            print(f"[AI BEYİN YANITI]: {ai_response}\n")
-        except Exception as e:
-            print(f"[AI Beyin Hata]: {e}\n")
-    else:
-        print("[AI Beyin] Modül yüklenemedi, varsayılan modda devam ediliyor.\n")
 
-    # 4. Tüm Sosyal Medya İşçilerinin (Workers) Çalıştırılması
-    print("--- SOSYAL MEDYA WORKERLARI TETİKLENİYOR ---")
-    
+    if brain:
+        print("[+] [AI Beyin] Modülü başarıyla yüklendi ve aktif.")
+    else:
+        print("[!] [AI Beyin] Modül yüklenemedi, varsayılan modda devam ediliyor.")
+
+    print("\n--- SOSYAL MEDYA WORKERLARI TETİKLENİYOR ---")
+
     workers_to_run = [
         ("instagram_worker", "InstagramWorker", "Instagram"),
         ("youtube_worker", "YouTubeWorker", "YouTube"),
         ("tiktok_worker", "TikTokWorker", "TikTok"),
-        ("worker", "CanvaWorker", "Canva"),
-        ("worker", "CapCutWorker", "CapCut"),
-        ("worker", "FacebookWorker", "Facebook"),
-        ("worker", "TelegramWorker", "Telegram"),
-        ("worker", "TwitterWorker", "Twitter/X"),
-        ("worker", "WhatsAppWorker", "WhatsApp")
+        ("canva_worker", "CanvaWorker", "Canva"),
+        ("capcut_worker", "CapCutWorker", "CapCut"),
+        ("facebook_worker", "FacebookWorker", "Facebook"),
+        ("telegram_worker", "TelegramWorker", "Telegram"),
+        ("twitter_worker", "TwitterWorker", "Twitter/X"),
+        ("whatsapp_worker", "WhatsAppWorker", "WhatsApp")
     ]
 
     for mod_name, cls_name, platform in workers_to_run:
         worker_cls = dynamic_import(mod_name, cls_name)
         if worker_cls:
             try:
-                w_instance = worker_cls()
-                print(f"[+] {platform} Worker başarıyla başlatıldı.")
+                # Sınıf hem parametreli hem parametresiz desteklesin
+                try:
+                    w_instance = worker_cls(brain=brain, memory_mgr=memory_mgr)
+                except TypeError:
+                    try:
+                        w_instance = worker_cls(brain, memory_mgr)
+                    except TypeError:
+                        w_instance = worker_cls()
+                
+                # Varsa çalıştır
+                if hasattr(w_instance, 'run'):
+                    w_instance.run()
+                    print(f"[+] {platform} Worker başarıyla çalıştırıldı.")
+                else:
+                    print(f"[*] {platform} Worker modülü hazır (run metodu yok).")
             except Exception as e:
-                print(f"[-] {platform} Worker başlatma hatası: {e}")
+                print(f"[-] {platform} Worker çalıştırma hatası: {e}")
         else:
-            print(f"[*] {platform} Worker modülü hazır (tetikleyici bekleniyor).")
+            print(f"[!] {platform} Worker bulunamadı veya içe aktarılamadı.")
 
-    print("\n==================================================")
+    print("==================================================")
     print("       TÜM SÜREÇ BAŞARIYLA TAMAMLANDI            ")
     print("==================================================")
 
