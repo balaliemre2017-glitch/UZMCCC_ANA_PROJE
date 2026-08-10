@@ -3,39 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Ajan Ajansı - Patron Paneli</title>
+    <title>UZMCCC V26 - Akıllı Ajan Komuta Merkezi</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
+            --bg-color: #0b0f19;
+            --card-bg: #151c2c;
+            --card-border: #232d42;
             --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.2);
             --text: #f8fafc;
             --text-muted: #94a3b8;
             --success: #22c55e;
             --error: #ef4444;
+            --warning: #f59e0b;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text); padding-bottom: 70px; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--card-bg); border-bottom: 1px solid #334155; }
-        .navbar h1 { font-size: 1.2rem; color: var(--accent); }
-        .page { display: none; padding: 16px; }
+        body { background-color: var(--bg-color); color: var(--text); padding-bottom: 75px; }
+        
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--card-bg); border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 90; }
+        .navbar h1 { font-size: 1rem; color: var(--accent); font-weight: 800; letter-spacing: 0.5px; }
+        .status-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid var(--success); }
+
+        .page { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
         .page.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #334155; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .card-title { font-weight: bold; font-size: 1.1rem; }
-        .status-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; background: rgba(34, 197, 94, 0.2); color: var(--success); }
-        .worker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
-        .worker-card { background: #0f172a; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #334155; }
-        .worker-card.active { border-color: var(--success); }
-        .chat-box { height: 320px; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid #334155; }
-        .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; }
-        .msg.patron { background: var(--accent); color: #000; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .msg.worker { background: var(--card-bg); color: var(--text); align-self: flex-start; border: 1px solid #334155; border-bottom-left-radius: 2px; }
-        input, select, textarea, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: var(--text); box-sizing: border-box; }
-        button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
-        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #334155; z-index: 100; }
-        .tab-item { text-align: center; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; width: 25%; }
+        
+        .card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--card-border); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card-title { font-weight: 700; font-size: 0.95rem; color: var(--text); }
+
+        /* İşçi Grid */
+        .worker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+        .worker-card { background: #0b0f19; border-radius: 10px; padding: 12px; text-align: center; border: 1px solid var(--card-border); cursor: pointer; transition: 0.2s; }
+        .worker-card.active { border-color: var(--success); background: rgba(34, 197, 94, 0.08); }
+        .worker-card.disabled { opacity: 0.4; border-color: var(--card-border); }
+
+        /* Chat & Console */
+        .chat-box { height: 260px; background: #070a10; border-radius: 10px; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--card-border); }
+        .msg { max-width: 88%; padding: 10px 12px; border-radius: 10px; font-size: 0.85rem; line-height: 1.4; }
+        .msg.patron { background: var(--accent); color: #000; align-self: flex-end; font-weight: 600; }
+        .msg.worker { background: var(--card-bg); color: var(--text); align-self: flex-start; border: 1px solid var(--card-border); }
+
+        .quick-cmds { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-top: 8px; }
+        .quick-btn { background: #1e293b; border: 1px solid var(--card-border); color: var(--accent); padding: 6px 12px; border-radius: 16px; font-size: 0.75rem; white-space: nowrap; cursor: pointer; }
+
+        .console-log { background: #05070c; border: 1px solid var(--card-border); border-radius: 8px; padding: 10px; font-family: monospace; font-size: 0.75rem; color: #34d399; height: 120px; overflow-y: auto; margin-top: 10px; }
+
+        input, select, textarea, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid var(--card-border); background: #070a10; color: var(--text); outline: none; }
+        textarea:focus, input:focus { border-color: var(--accent); }
+        
+        button.primary-btn { background: var(--accent); color: #000; font-weight: 800; cursor: pointer; border: none; box-shadow: 0 0 12px var(--accent-glow); transition: 0.2s; }
+        button.primary-btn:active { transform: scale(0.98); }
+
+        /* Tab Bar */
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--card-border); z-index: 100; }
+        .tab-item { text-align: center; color: var(--text-muted); font-size: 0.7rem; cursor: pointer; width: 25%; }
         .tab-item.active { color: var(--accent); font-weight: bold; }
     </style>
 </head>
@@ -43,72 +64,89 @@
 
     <div class="navbar">
         <h1 id="page-title">Projelerim</h1>
-        <span class="status-badge" id="global-status">Otonom Sistem Aktif</span>
+        <span class="status-badge" id="global-status">V26 OTONOM AKTİF</span>
     </div>
 
     <!-- 1. PROJELER SAYFASI -->
     <div id="page-projects" class="page active">
-        <div class="card" onclick="selectProject('music_project', 'AI Sanatçı Projesi')">
+        <div class="card" onclick="selectProject('auto_agency', '🎵 AI Sanatçı Projesi')">
             <div class="card-header">
-                <span class="card-title">🎵 AI Sanatçı Projesi</span>
-                <span class="status-badge">Aktif Proje</span>
+                <span class="card-title">🎵 AI Sanatçı & Klip Projesi</span>
+                <span class="status-badge" id="badge-auto">SEÇİLİ</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Müzik & Klip • Havalı / Mizahi Üslup • TikTok / Instagram / Shorts</p>
+            <p style="color: var(--text-muted); font-size: 0.8rem;">Arabesk Rap • Mizahi Üslup • Otomatik Klip & Sosyal Medya Dağıtımı</p>
         </div>
-        <div class="card" onclick="selectProject('e_commerce', 'Domates/Biber Toptancılığı')">
+
+        <div class="card" onclick="selectProject('e_commerce', '🍅 Toptancılık & Şirket')">
             <div class="card-header">
                 <span class="card-title">🍅 Domates/Biber Toptancılığı</span>
-                <span class="status-badge" style="color: var(--text-muted); background: rgba(255,255,255,0.1);">Hazırda</span>
+                <span class="status-badge" id="badge-ecom" style="color: var(--text-muted); border-color: var(--card-border); background: transparent;">HAZIRDA</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Şirket Profili • İlan Otomasyonu • WhatsApp / Facebook</p>
+            <p style="color: var(--text-muted); font-size: 0.8rem;">Kurumsal Profil • WhatsApp / FB İlan Otomasyonu • Müşteri Taraması</p>
         </div>
     </div>
 
     <!-- 2. İŞÇİ KADROSU SAYFASI -->
     <div id="page-workers" class="page">
-        <h3 id="current-project-name" style="margin-bottom: 12px; color: var(--accent);">Seçili Proje: AI Sanatçı Projesi</h3>
+        <h3 id="current-project-name" style="margin-bottom: 8px; color: var(--accent); font-size: 1rem;">Seçili Proje: AI Sanatçı Projesi</h3>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin-bottom: 12px;">Kullanmak istediğin işçilere dokunarak aktif/pasif yapabilirsin:</p>
+        
         <div class="worker-grid">
-            <div class="worker-card active"><p><b>Instagram</b></p><span class="status-badge">Bağlı</span></div>
-            <div class="worker-card active"><p><b>YouTube</b></p><span class="status-badge">Bağlı</span></div>
-            <div class="worker-card active"><p><b>TikTok</b></p><span class="status-badge">Bağlı</span></div>
-            <div class="worker-card active"><p><b>Canva / CapCut</b></p><span class="status-badge">Hazır</span></div>
+            <div class="worker-card active" id="w-instagram" onclick="toggleWorker('instagram', 'w-instagram')"><p><b>Instagram</b></p><span class="status-badge">Aktif</span></div>
+            <div class="worker-card active" id="w-tiktok" onclick="toggleWorker('tiktok', 'w-tiktok')"><p><b>TikTok</b></p><span class="status-badge">Aktif</span></div>
+            <div class="worker-card active" id="w-youtube" onclick="toggleWorker('youtube', 'w-youtube')"><p><b>YouTube Shorts</b></p><span class="status-badge">Aktif</span></div>
+            <div class="worker-card active" id="w-canva" onclick="toggleWorker('canva', 'w-canva')"><p><b>Canva Tasarım</b></p><span class="status-badge">Aktif</span></div>
+            <div class="worker-card active" id="w-capcut" onclick="toggleWorker('capcut', 'w-capcut')"><p><b>CapCut Editör</b></p><span class="status-badge">Aktif</span></div>
+            <div class="worker-card active" id="w-telegram" onclick="toggleWorker('telegram', 'w-telegram')"><p><b>Telegram</b></p><span class="status-badge">Aktif</span></div>
         </div>
     </div>
 
     <!-- 3. KOMUT VE CHAT ODASI -->
     <div id="page-chat" class="page">
         <div class="chat-box" id="chat-box">
-            <div class="msg worker"><b>Patron Beyni:</b> Hoş geldin patron! Sistem tamamen hazır. Emirlerini bekliyorum!</div>
+            <div class="msg worker"><b>Patron Beyni:</b> Hoş geldin patron! Sistem hazır. Komut bekliyorum.</div>
         </div>
-        <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <input type="text" id="chat-input" placeholder="Örn: Instagram'a gönderi paylaş, 3 yoruma esprili yanıt ver...">
-            <button style="width: 90px;" onclick="sendInstruction()">Gönder</button>
+
+        <div class="quick-cmds">
+            <div class="quick-btn" onclick="setQuickCmd('Son parçadan 15sn klip üret, Instagram ve TikTok\'a yükle.')">🎬 Klip Paylaş</div>
+            <div class="quick-btn" onclick="setQuickCmd('Yorumları tara, komik 3 yoruma esprili cevap ver.')">💬 Yorum Cevapla</div>
+            <div class="quick-btn" onclick="setQuickCmd('Genel Durum Raporu ve Otomatik Etkileşim Taraması')">📊 Rapor Al</div>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+            <input type="text" id="chat-input" placeholder="Emrini yaz patron...">
+            <button class="primary-btn" style="width: 85px;" onclick="sendInstruction()">Gönder</button>
+        </div>
+
+        <div class="console-log" id="console-log">
+            > UZMCCC V26 Konsol Bağlantısı Kuruldu...<br>
         </div>
     </div>
 
     <!-- 4. HESAP AYARLARI -->
     <div id="page-settings" class="page">
-        <h3>Hesap Ayarları & Güvenlik</h3>
-        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">Sosyal Medya Oturum Bilgileri:</p>
+        <h3>Sistem & Hesap Ayarları</h3>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">Erişim anahtarları ve sosyal medya bilgileri:</p>
         
         <div class="card">
-            <h4>Instagram Giriş Bilgileri</h4>
-            <input type="text" id="ig-user" placeholder="Instagram Kullanıcı Adı">
-            <input type="password" id="ig-pass" placeholder="Instagram Şifre">
+            <h4>GitHub Personal Access Token (PAT)</h4>
+            <input type="password" id="gh-token-input" placeholder="ghp_... Kodunu Buraya Yapıştırın">
+            <button class="primary-btn" onclick="saveToken()" style="margin-top: 10px;">Token'ı Telefon Hafızasına Kaydet</button>
         </div>
 
         <div class="card">
-            <h4>TikTok Oturum Kodu (Session ID)</h4>
-            <input type="password" id="tt-session" placeholder="TikTok Session ID">
+            <h4>Sosyal Medya Oturum Bilgileri</h4>
+            <input type="text" id="ig-user" placeholder="Instagram Kullanıcı Adı">
+            <input type="password" id="ig-pass" placeholder="Instagram Şifre">
+            <input type="password" id="tt-session" placeholder="TikTok Session ID" style="margin-top: 8px;">
+            <button class="primary-btn" onclick="saveSocialCredentials()" style="margin-top: 10px; background: #334155; color: #fff;">Giriş Bilgilerini Güncelle</button>
         </div>
-
-        <button onclick="alert('Bilgiler güncellendi!')">Giriş Bilgilerini Kaydet</button>
     </div>
 
     <!-- ALT TAB MENÜSÜ -->
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchPage('projects', 'Projelerim', this)"><div>📁</div>Projeler</div>
-        <div class="tab-item" onclick="switchPage('workers', 'İschiler', this)"><div>🤖</div>İşçiler</div>
+        <div class="tab-item" onclick="switchPage('workers', 'İşçiler', this)"><div>🤖</div>İşçiler</div>
         <div class="tab-item" onclick="switchPage('chat', 'Komut Odası', this)"><div>💬</div>Komut</div>
         <div class="tab-item" onclick="switchPage('settings', 'Ayarlar', this)"><div>⚙️</div>Ayarlar</div>
     </div>
@@ -116,9 +154,39 @@
     <script>
         const GITHUB_USER = "balaliemre2017-glitch";
         const GITHUB_REPO = "UZMCCC_ANA_PROJE";
-        // TOKEN Doğrudan Koda Entegre Edildi (Sıfır Uğraş)
-        const HARDCODED_TOKEN = "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";
-        let activeProjectType = "music_project";
+        
+        let activeProjectType = "auto_agency";
+        let activeWorkersList = ["instagram", "tiktok", "youtube", "canva", "capcut", "telegram"];
+
+        window.onload = function() {
+            const savedToken = localStorage.getItem('GH_PAT');
+            if (savedToken) {
+                document.getElementById('gh-token-input').value = savedToken;
+                writeConsole("Kayıtlı GitHub Token yüklendi.");
+            }
+        };
+
+        function writeConsole(text) {
+            const c = document.getElementById('console-log');
+            c.innerHTML += `> ${text}<br>`;
+            c.scrollTop = c.scrollHeight;
+        }
+
+        function saveToken() {
+            const token = document.getElementById('gh-token-input').value.trim();
+            if(token) {
+                localStorage.setItem('GH_PAT', token);
+                alert("Token telefon hafızasına başarıyla kaydedildi!");
+                writeConsole("Yeni Token hafızaya işlendi.");
+            } else {
+                alert("Lütfen geçerli bir token girin.");
+            }
+        }
+
+        function saveSocialCredentials() {
+            alert("Hesap bilgileri kaydedildi!");
+            writeConsole("Sosyal medya bilgileri güncellendi.");
+        }
 
         function switchPage(pageId, title, element) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -131,14 +199,56 @@
         function selectProject(projKey, projTitle) {
             activeProjectType = projKey;
             document.getElementById('current-project-name').innerText = "Seçili Proje: " + projTitle;
-            alert("Aktif Proje Seçildi: " + projTitle);
+            
+            if(projKey === 'auto_agency') {
+                document.getElementById('badge-auto').innerText = "SEÇİLİ";
+                document.getElementById('badge-auto').style.cssText = "color: var(--success); border: 1px solid var(--success); background: rgba(34, 197, 94, 0.15);";
+                document.getElementById('badge-ecom').innerText = "HAZIRDA";
+                document.getElementById('badge-ecom').style.cssText = "color: var(--text-muted); border-color: var(--card-border); background: transparent;";
+            } else {
+                document.getElementById('badge-ecom').innerText = "SEÇİLİ";
+                document.getElementById('badge-ecom').style.cssText = "color: var(--success); border: 1px solid var(--success); background: rgba(34, 197, 94, 0.15);";
+                document.getElementById('badge-auto').innerText = "HAZIRDA";
+                document.getElementById('badge-auto').style.cssText = "color: var(--text-muted); border-color: var(--card-border); background: transparent;";
+            }
+
+            writeConsole(`Aktif Proje Değiştirildi: ${projKey}`);
             switchPage('chat', 'Komut Odası', document.querySelectorAll('.tab-item')[2]);
+        }
+
+        function toggleWorker(workerKey, elementId) {
+            const card = document.getElementById(elementId);
+            const badge = card.querySelector('.status-badge');
+            
+            if(activeWorkersList.includes(workerKey)) {
+                activeWorkersList = activeWorkersList.filter(w => w !== workerKey);
+                card.classList.remove('active');
+                card.classList.add('disabled');
+                badge.innerText = "Pasif";
+            } else {
+                activeWorkersList.push(workerKey);
+                card.classList.add('active');
+                card.classList.remove('disabled');
+                badge.innerText = "Aktif";
+            }
+            writeConsole(`Aktif İşçiler: ${activeWorkersList.join(', ')}`);
+        }
+
+        function setQuickCmd(text) {
+            document.getElementById('chat-input').value = text;
         }
 
         async function sendInstruction() {
             let input = document.getElementById('chat-input');
             let text = input.value.trim();
             if(!text) return;
+
+            let token = localStorage.getItem('GH_PAT') || document.getElementById('gh-token-input').value.trim();
+            if(!token) {
+                alert("Lütfen önce Ayarlar sekmesinden GitHub Token'ınızı kaydedin!");
+                switchPage('settings', 'Ayarlar', document.querySelectorAll('.tab-item')[3]);
+                return;
+            }
             
             let box = document.getElementById('chat-box');
             box.innerHTML += `<div class="msg patron">${text}</div>`;
@@ -146,31 +256,37 @@
             
             box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> Emir alındı, GitHub Actions tetikleniyor...</div>`;
             box.scrollTop = box.scrollHeight;
+            
+            writeConsole(`Tetikleniyor: project_type=${activeProjectType}, workers=${activeWorkersList.join(',')}`);
 
             try {
                 let response = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/vnd.github.v3+json',
-                        'Authorization': 'token ' + HARDCODED_TOKEN,
+                        'Authorization': 'token ' + token,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         event_type: 'patron_cmd',
                         client_payload: { 
                             command: text,
-                            project_type: activeProjectType
+                            project_type: activeProjectType,
+                            active_workers: activeWorkersList.join(',')
                         }
                     })
                 });
 
                 if(response.ok || response.status === 204) {
-                    box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> 🚀 İşçiler emri aldı! Görev başlatıldı.</div>`;
+                    box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> 🚀 İşçiler emri aldı! main.py motoru çalışıyor.</div>`;
+                    writeConsole("BAŞARILI: main.py tetiklendi!");
                 } else {
-                    box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Bağlantı hatası (Status: ${response.status})</div>`;
+                    box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Geçersiz Token veya Yetki Yetersiz (Status: ${response.status})</div>`;
+                    writeConsole(`HATA: Status ${response.status}`);
                 }
             } catch(e) {
                 box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Sunucuya ulaşılamadı: ${e.message}</div>`;
+                writeConsole(`HATA: ${e.message}`);
             }
             box.scrollTop = box.scrollHeight;
         }
