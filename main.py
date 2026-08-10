@@ -2,7 +2,6 @@ import sys
 import os
 import json
 
-# Tüm alt klasörleri dinamik olarak Python yoluna ekle
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
@@ -10,11 +9,9 @@ for root, dirs, files in os.walk(BASE_DIR):
     if root not in sys.path:
         sys.path.insert(0, root)
 
-# Core Modülleri (Hafıza ve AI Beyin)
 memory_mgr = None
 brain = None
 
-# Memory Manager
 try:
     from memory import MemoryManager
     memory_mgr = MemoryManager()
@@ -25,7 +22,6 @@ except Exception:
     except Exception:
         pass
 
-# AI Beyin
 try:
     from brain import AIBrain
     brain = AIBrain(memory_mgr) if memory_mgr else AIBrain()
@@ -37,10 +33,9 @@ except Exception:
         try:
             from core.core.brain import AIBrain
             brain = AIBrain(memory_mgr) if memory_mgr else AIBrain()
-        except Exception as e:
-            print(f"[-] AIBrain Yükleme Hatası: {e}")
+        except Exception:
+            pass
 
-# Worker Modüllerini Dinamik Yükleme
 def dynamic_import(module_name, class_name):
     try:
         mod = __import__(module_name, fromlist=[class_name])
@@ -53,7 +48,6 @@ def main():
     print("      UZMCCC V26 - TAM OTOMATİK BOT BAŞLATILDI    ")
     print("==================================================")
     
-    # Komut Okuma
     event_path = os.environ.get("GITHUB_EVENT_PATH")
     command = "Genel Durum Raporu ve Etkileşim Taraması"
     
@@ -67,7 +61,6 @@ def main():
 
     print(f"\n[GÖREV]: {command}")
 
-    # AI Plan Üretimi
     ai_plan = {}
     if brain and hasattr(brain, 'think'):
         try:
@@ -97,7 +90,6 @@ def main():
         worker_cls = dynamic_import(mod_name, cls_name)
         if worker_cls:
             try:
-                # Worker nesnesini oluştur
                 try:
                     w_instance = worker_cls(brain=brain, memory_mgr=memory_mgr)
                 except TypeError:
@@ -106,18 +98,20 @@ def main():
                     except TypeError:
                         w_instance = worker_cls()
 
-                # run() metodunu uygun parametrelerle çağır
                 if hasattr(w_instance, 'run'):
-                    try:
-                        w_instance.run(command=command, ai_plan=ai_plan, project_type="auto")
-                    except TypeError:
-                        try:
-                            w_instance.run(command=command, ai_plan=ai_plan)
-                        except TypeError:
-                            try:
-                                w_instance.run(command)
-                            except TypeError:
-                                w_instance.run()
+                    import inspect
+                    sig = inspect.signature(w_instance.run)
+                    params = sig.parameters
+                    
+                    kwargs = {}
+                    if 'command' in params:
+                        kwargs['command'] = command
+                    if 'ai_plan' in params:
+                        kwargs['ai_plan'] = ai_plan
+                    if 'project_type' in params:
+                        kwargs['project_type'] = "auto"
+                        
+                    w_instance.run(**kwargs)
 
                 print(f"[+] {platform} Worker başarıyla çalıştırıldı.")
             except Exception as e:
