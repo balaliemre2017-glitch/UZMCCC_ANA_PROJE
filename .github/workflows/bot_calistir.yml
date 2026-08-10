@@ -29,5 +29,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+          INSTAGRAM_SESSIONID: ${{ secrets.INSTAGRAM_SESSIONID }}
+          INSTAGRAM_PROXY: ${{ secrets.INSTAGRAM_PROXY }}
           TIKTOK_SESSION_ID: ${{ secrets.TIKTOK_SESSION_ID }}
         run: python main.py
