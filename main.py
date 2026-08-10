@@ -3,6 +3,7 @@ import os
 import json
 import time
 import traceback
+import importlib
 
 # =========================================================
 # 1. GLOBAL PROXY VE AĞ GÜVENLİĞİ
@@ -18,15 +19,12 @@ if PROXY:
         print(f"[!] Proxy yükleme hatası: {e}")
 
 # =========================================================
-# 2. DİNAMİK DİZİN YAPILANMASI (Tüm Zip ve İç İçe Yollar Dahil)
+# 2. TEMİZ DİZİN YAPILANMASI
 # =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
-
-for root, dirs, files in os.walk(BASE_DIR):
-    if root not in sys.path:
-        sys.path.insert(0, root)
+# DİKKAT: os.walk ile bütün alt klasörleri sys.path'e ekleme işlemi iptal edildi!
 
 # =========================================================
 # 3. CORE MODÜLLERİ (Hafıza ve Patron Beyni)
@@ -34,23 +32,26 @@ for root, dirs, files in os.walk(BASE_DIR):
 memory_mgr = None
 brain = None
 
-for m_path in ["memory", "core.memory", "core.hafiza", "hafiza"]:
+# Sadece ana core klasörüne bakıyoruz
+try:
+    from core.memory import MemoryManager
+    memory_mgr = MemoryManager()
+except ImportError:
     try:
-        mod = __import__(m_path, fromlist=["MemoryManager"])
-        memory_mgr = getattr(mod, "MemoryManager")()
-        break
-    except Exception:
-        pass
+        from core.hafiza import MemoryManager
+        memory_mgr = MemoryManager()
+    except Exception as e:
+        print(f"[!] Hafıza modülü yüklenemedi: {e}")
 
-for b_path in ["brain", "core.brain", "core.core.brain", "core.patron_beyni", "patron_beyni"]:
+try:
+    from core.patron_beyni import PatronBeyni
+    brain = PatronBeyni(memory_mgr) if memory_mgr else PatronBeyni()
+except ImportError:
     try:
-        mod = __import__(b_path, fromlist=["AIBrain", "Brain", "PatronBeyni"])
-        cls_name = "AIBrain" if hasattr(mod, "AIBrain") else ("Brain" if hasattr(mod, "Brain") else "PatronBeyni")
-        BrainClass = getattr(mod, cls_name)
-        brain = BrainClass(memory_mgr) if memory_mgr else BrainClass()
-        break
-    except Exception:
-        pass
+        from core.brain import AIBrain
+        brain = AIBrain(memory_mgr) if memory_mgr else AIBrain()
+    except Exception as e:
+        print(f"[!] Patron Beyni yüklenemedi: {e}")
 
 # =========================================================
 # 4. DİNAMİK HİYERARŞİ VE İŞÇİ YÜKLEYİCİ MERKEZİ
@@ -59,34 +60,21 @@ hierarchy_mod = None
 try:
     from core.hierarchy import CompanyHierarchy
     hierarchy_mod = CompanyHierarchy
-except Exception:
-    try:
-        from core.core.hierarchy import CompanyHierarchy
-        hierarchy_mod = CompanyHierarchy
-    except Exception:
-        pass
+except Exception as e:
+    print(f"[!] Hiyerarşi modülü yüklenemedi: {e}")
 
 def load_worker(folder_name, class_name):
-    paths = [
-        f"workers.{folder_name}.worker",
-        f"core.core.workers.{folder_name}_worker",
-        f"core.workers.{folder_name}_worker",
-        f"workers.{folder_name}_worker",
-        f"{folder_name}_worker",
-        f"core.core.workers.workers.workers.{folder_name}_worker"
-    ]
-    for p in paths:
-        try:
-            mod = __import__(p, fromlist=[class_name])
-            return getattr(mod, class_name)
-        except Exception:
-            pass
-    return None
+    """İşçileri SADECE temiz workers/ klasöründen yükler."""
+    module_path = f"workers.{folder_name}.worker"
+    try:
+        mod = importlib.import_module(module_path)
+        return getattr(mod, class_name)
+    except Exception as e:
+        print(f"[!] ❌ İşçi yüklenemedi ({class_name}): {e}")
+        return None
 
 def execute_intent_on_worker(w_instance, target_action, parameters, command, pipeline_data):
-    """
-    Gemini Beyninin karar verdiği eylemi ilgili işçide dinamik ve hatasız çalıştırır.
-    """
+    """Gemini Beyninin karar verdiği eylemi ilgili işçide dinamik ve hatasız çalıştırır."""
     if hasattr(w_instance, target_action):
         method = getattr(w_instance, target_action)
         try:
@@ -120,7 +108,6 @@ def execute_intent_on_worker(w_instance, target_action, parameters, command, pip
                 return w_instance.run(command)
             except TypeError:
                 return w_instance.run()
-
     return None
 
 # =========================================================
@@ -150,7 +137,7 @@ def main():
     print(f"\n[📁 AKTİF PROJE]: {project_type}")
     print(f"[👑 PATRON EMRİ]: {patron_emri}")
 
-    # Otomatik İşe Alım ve Hiyerarşi Taraması (Gelecekteki tüm yeni işçiler dahil)
+    # Otomatik İşe Alım ve Hiyerarşi Taraması
     company = None
     hierarchy_workers = {}
     if hierarchy_mod:
@@ -159,9 +146,7 @@ def main():
 
     cmd_lower = patron_emri.lower()
 
-    # ---------------------------------------------------------
-    # ÖZEL MOD: HAFTALIK PATRON EĞİTİMİ / TOPLANTI
-    # ---------------------------------------------------------
+    # HAFTALIK PATRON EĞİTİMİ / TOPLANTI
     if any(k in cmd_lower for k in ["eğitim", "öğren", "ders", "toplantı"]):
         print("\n[🎓 HAFTALIK PATRON EĞİTİMİ / TOPLANTI MODU AKTİF]")
         target_found = False
@@ -175,9 +160,7 @@ def main():
                 company.conduct_training(first_key, patron_emri)
         return
 
-    # ---------------------------------------------------------
-    # GEMINI BEYNİ İLE NİYET VE HEDEF ANALİZİ (DOĞAL DİL)
-    # ---------------------------------------------------------
+    # GEMINI BEYNİ İLE NİYET VE HEDEF ANALİZİ
     print("\n[🧠 PATRON BEYNİ]: Komut analiz ediliyor ve işçilere görev dağıtılıyor...")
     
     intent_data = {
@@ -208,9 +191,7 @@ def main():
 
     active_filter = [w.strip() for w in active_workers_env.split(",") if w.strip()]
 
-    # ---------------------------------------------------------
-    # 1. AŞAMA: PRODÜKSİYON (Canva / CapCut)
-    # ---------------------------------------------------------
+    # 1. AŞAMA: PRODÜKSİYON
     if intent_data.get("need_production", True):
         print("\n--- 1. AŞAMA: PRODÜKSİYON VE MEDYA HAZIRLIĞI ---")
         production_workers = [
@@ -231,9 +212,7 @@ def main():
                 except Exception as e:
                     print(f"[-] [{platform_title}] Hatası: {e}")
 
-    # ---------------------------------------------------------
-    # 2. AŞAMA: SOSYAL MEDYA İŞÇİLERİ & DİNAMİK UZMANLAR
-    # ---------------------------------------------------------
+    # 2. AŞAMA: SOSYAL MEDYA İŞÇİLERİ
     print("\n--- 2. AŞAMA: PLATFORM İŞÇİLERİ VE UZMANLAR İŞ BAŞINDA ---")
     social_workers = [
         ("instagram", "InstagramWorker", "Instagram Uzmanı"),
@@ -247,7 +226,6 @@ def main():
 
     target_workers_list = intent_data.get("target_workers", [])
 
-    # Standart Sosyal Medya İşçileri İcrası
     for folder, cls_name, platform_title in social_workers:
         if active_filter and folder not in active_filter:
             continue
@@ -270,7 +248,7 @@ def main():
             except Exception as e:
                 print(f"[-] [{platform_title}] Hatası: {e}")
 
-    # Hiyerarşi Üzerinden Otomatik Keşfedilen Diğer Uzmanlar (Güvenlik, Reklam vb.)
+    # Hiyerarşi Üzerinden Otomatik Keşfedilen Diğer Uzmanlar
     for w_key, w_obj in hierarchy_workers.items():
         if w_key not in ["instagram", "youtube", "tiktok", "facebook", "telegram", "twitter_x", "whatsapp", "canva", "capcut"]:
             try:
