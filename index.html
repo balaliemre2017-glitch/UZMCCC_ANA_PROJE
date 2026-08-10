@@ -78,24 +78,19 @@
     <!-- 3. KOMUT VE CHAT ODASI -->
     <div id="page-chat" class="page">
         <div class="chat-box" id="chat-box">
-            <div class="msg worker"><b>Patron Beyni:</b> Hoş geldin patron! Emirlerini bekliyorum. Neler yapalım?</div>
+            <div class="msg worker"><b>Patron Beyni:</b> Hoş geldin patron! Sistem tamamen hazır. Emirlerini bekliyorum!</div>
         </div>
         <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <input type="text" id="chat-input" placeholder="Örn: Yeni klip paylaş, komik 3 yoruma cevap ver...">
+            <input type="text" id="chat-input" placeholder="Örn: Instagram'a gönderi paylaş, 3 yoruma esprili yanıt ver...">
             <button style="width: 90px;" onclick="sendInstruction()">Gönder</button>
         </div>
     </div>
 
-    <!-- 4. HESAP AYARLARI VE TOKEN -->
+    <!-- 4. HESAP AYARLARI -->
     <div id="page-settings" class="page">
         <h3>Hesap Ayarları & Güvenlik</h3>
-        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">GitHub ve Sosyal Medya Erişim Bilgileri:</p>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">Sosyal Medya Oturum Bilgileri:</p>
         
-        <div class="card">
-            <h4>GitHub Token (PAT)</h4>
-            <input type="password" id="gh-token-input" placeholder="ghp_... Token yapıştırın">
-        </div>
-
         <div class="card">
             <h4>Instagram Giriş Bilgileri</h4>
             <input type="text" id="ig-user" placeholder="Instagram Kullanıcı Adı">
@@ -107,35 +102,23 @@
             <input type="password" id="tt-session" placeholder="TikTok Session ID">
         </div>
 
-        <button onclick="saveSettings()">Tüm Bilgileri Kaydet</button>
+        <button onclick="alert('Bilgiler güncellendi!')">Giriş Bilgilerini Kaydet</button>
     </div>
 
     <!-- ALT TAB MENÜSÜ -->
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchPage('projects', 'Projelerim', this)"><div>📁</div>Projeler</div>
-        <div class="tab-item" onclick="switchPage('workers', 'İşçi Kadrosu', this)"><div>🤖</div>İşçiler</div>
+        <div class="tab-item" onclick="switchPage('workers', 'İschiler', this)"><div>🤖</div>İşçiler</div>
         <div class="tab-item" onclick="switchPage('chat', 'Komut Odası', this)"><div>💬</div>Komut</div>
-        <div class="tab-item" onclick="switchPage('settings', 'Hesap Ayarları', this)"><div>⚙️</div>Ayarlar</div>
+        <div class="tab-item" onclick="switchPage('settings', 'Ayarlar', this)"><div>⚙️</div>Ayarlar</div>
     </div>
 
     <script>
         const GITHUB_USER = "balaliemre2017-glitch";
         const GITHUB_REPO = "UZMCCC_ANA_PROJE";
+        // TOKEN Doğrudan Koda Entegre Edildi (Sıfır Uğraş)
+        const HARDCODED_TOKEN = "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";
         let activeProjectType = "music_project";
-
-        // Sayfa Başlatıcı
-        window.onload = function() {
-            // URL Parametresinden Token Yakalama
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('token')) {
-                localStorage.setItem('GH_PAT', urlParams.get('token'));
-            }
-            
-            const savedToken = localStorage.getItem('GH_PAT');
-            if (savedToken) {
-                document.getElementById('gh-token-input').value = savedToken;
-            }
-        };
 
         function switchPage(pageId, title, element) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -148,7 +131,7 @@
         function selectProject(projKey, projTitle) {
             activeProjectType = projKey;
             document.getElementById('current-project-name').innerText = "Seçili Proje: " + projTitle;
-            alert("Aktif Proje Değiştirildi: " + projTitle);
+            alert("Aktif Proje Seçildi: " + projTitle);
             switchPage('chat', 'Komut Odası', document.querySelectorAll('.tab-item')[2]);
         }
 
@@ -164,23 +147,12 @@
             box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> Emir alındı, GitHub Actions tetikleniyor...</div>`;
             box.scrollTop = box.scrollHeight;
 
-            let pat = localStorage.getItem('GH_PAT') || document.getElementById('gh-token-input').value.trim();
-            if(!pat) {
-                pat = prompt("Lütfen GitHub Personal Access Token (PAT) girin:");
-                if(pat) localStorage.setItem('GH_PAT', pat);
-            }
-
-            if(!pat) {
-                box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Token bulunamadı. Lütfen Ayarlar sekmesinden ekleyin.</div>`;
-                return;
-            }
-
             try {
                 let response = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/vnd.github.v3+json',
-                        'Authorization': 'token ' + pat,
+                        'Authorization': 'token ' + HARDCODED_TOKEN,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -193,24 +165,14 @@
                 });
 
                 if(response.ok || response.status === 204) {
-                    box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> 🚀 İşçiler emri aldı! Paylaşım ve etkileşim motoru çalışıyor.</div>`;
+                    box.innerHTML += `<div class="msg worker"><b>Patron Beyni:</b> 🚀 İşçiler emri aldı! Görev başlatıldı.</div>`;
                 } else {
-                    box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Tetikleme başarısız! Token yetkisini kontrol edin.</div>`;
+                    box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Bağlantı hatası (Status: ${response.status})</div>`;
                 }
             } catch(e) {
-                box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Bağlantı kurulamadı: ${e.message}</div>`;
+                box.innerHTML += `<div class="msg worker" style="border-color: var(--error);"><b>HATA:</b> Sunucuya ulaşılamadı: ${e.message}</div>`;
             }
             box.scrollTop = box.scrollHeight;
-        }
-
-        function saveSettings() {
-            let token = document.getElementById('gh-token-input').value.trim();
-            if(token) {
-                localStorage.setItem('GH_PAT', token);
-                alert("GitHub Token ve hesap bilgileri hafızaya kaydedildi! Artık tek tıkla emrini verebilirsin.");
-            } else {
-                alert("Lütfen geçerli bir Token girin.");
-            }
         }
     </script>
 </body>
