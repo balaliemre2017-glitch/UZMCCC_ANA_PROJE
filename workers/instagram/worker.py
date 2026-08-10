@@ -3,7 +3,9 @@ import requests
 from instagrapi import Client
 
 class InstagramWorker:
-    def __init__(self):
+    def __init__(self, brain=None, memory_mgr=None):
+        self.brain = brain
+        self.memory_mgr = memory_mgr
         self.username = os.environ.get("INSTAGRAM_USERNAME")
         self.password = os.environ.get("INSTAGRAM_PASSWORD")
         self.cl = Client()
@@ -38,7 +40,6 @@ class InstagramWorker:
 
     def run(self):
         if self.login():
-            # Test resmi indirip gönderme örneği
             test_img_path = "test_post.jpg"
             if not os.path.exists(test_img_path):
                 img_data = requests.get("https://picsum.photos/1080/1080").content
@@ -50,4 +51,3 @@ class InstagramWorker:
 if __name__ == "__main__":
     worker = InstagramWorker()
     worker.run()
-InstagramWorker().run()
