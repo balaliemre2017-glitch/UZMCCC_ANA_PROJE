@@ -10,20 +10,32 @@ class InstagramWorker:
         self.memory_mgr = memory_mgr
         self.username = os.environ.get("INSTAGRAM_USERNAME")
         self.password = os.environ.get("INSTAGRAM_PASSWORD")
+        self.session_id = os.environ.get("INSTAGRAM_SESSIONID")
         self.cl = Client()
         self.session_file = "instagram_session.json"
 
     def login(self):
+        # 1. Öncelik: Session ID ile doğrudan, şifresiz/doğrulamasız giriş
+        if self.session_id:
+            print("[*] Instagram Session ID ile çerez üzerinden giriş yapılıyor...")
+            try:
+                self.cl.login_by_sessionid(self.session_id)
+                print("[+] Instagram Oturumu Çerezle Başarıyla Açıldı! (CAPTCHA / Robot Engeli Aşıldı)")
+                return True
+            except Exception as e:
+                print(f"[!] Session ID ile Giriş Hatası: {e} - Yedek kullanıcı adı/şifre moduna geçiliyor...")
+
+        # 2. Öncelik: Kullanıcı adı ve şifre ile klasik giriş (Yedek Plan)
         if not self.username or not self.password:
-            print("[-] Instagram kullanıcı adı veya şifre Secrets'ta bulunamadı!")
+            print("[-] Instagram kullanıcı adı veya şifre/Session ID Secrets'ta bulunamadı!")
             return False
 
         try:
             if os.path.exists(self.session_file):
-                print("[*] Kayıtlı Instagram oturumu yükleniyor...")
+                print("[*] Kayıtlı Instagram oturum dosyası yükleniyor...")
                 self.cl.load_settings(self.session_file)
 
-            print(f"[*] Instagram'a giriş yapılıyor ({self.username})...")
+            print(f"[*] Instagram'a kullanıcı adı ile giriş yapılıyor ({self.username})...")
             self.cl.login(self.username, self.password)
             self.cl.dump_settings(self.session_file)
             print("[+] Instagram giriş başarılı!")
@@ -49,7 +61,7 @@ class InstagramWorker:
                 handler.write(img_data)
 
         # Anti-Spam İnsansı Bekleme
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(3, 6))
         
         try:
             print("[*] Patronun hazırladığı içerik Instagram'a yükleniyor...")
