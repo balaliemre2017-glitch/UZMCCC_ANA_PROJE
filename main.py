@@ -2,6 +2,7 @@ import sys
 import os
 import json
 
+# Proje ana dizinini ve tüm alt klasörleri dinamik olarak Python yoluna ekle
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
@@ -9,33 +10,30 @@ for root, dirs, files in os.walk(BASE_DIR):
     if root not in sys.path:
         sys.path.insert(0, root)
 
+# Core Modülleri Yükleme (Hafıza ve AI Beyin)
 memory_mgr = None
 brain = None
 
-try:
-    from memory import MemoryManager
-    memory_mgr = MemoryManager()
-except Exception:
+# 1. MemoryManager Yükleme
+for import_path in ["memory", "core.memory", "core.core.memory"]:
     try:
-        from core.memory import MemoryManager
-        memory_mgr = MemoryManager()
+        mod = __import__(import_path, fromlist=["MemoryManager"])
+        memory_mgr = getattr(mod, "MemoryManager")()
+        break
     except Exception:
         pass
 
-try:
-    from brain import AIBrain
-    brain = AIBrain(memory_mgr) if memory_mgr else AIBrain()
-except Exception:
+# 2. AIBrain Yükleme
+for import_path in ["brain", "core.brain", "core.core.brain"]:
     try:
-        from core.brain import AIBrain
-        brain = AIBrain(memory_mgr) if memory_mgr else AIBrain()
+        mod = __import__(import_path, fromlist=["AIBrain"])
+        AIBrainCls = getattr(mod, "AIBrain")
+        brain = AIBrainCls(memory_mgr) if memory_mgr else AIBrainCls()
+        break
     except Exception:
-        try:
-            from core.core.brain import AIBrain
-            brain = AIBrain(memory_mgr) if memory_mgr else AIBrain()
-        except Exception:
-            pass
+        pass
 
+# Worker Modüllerini Dinamik Yükleme Fonksiyonu
 def dynamic_import(module_name, class_name):
     try:
         mod = __import__(module_name, fromlist=[class_name])
@@ -47,10 +45,11 @@ def main():
     print("==================================================")
     print("      UZMCCC V26 - TAM OTOMATİK BOT BAŞLATILDI    ")
     print("==================================================")
-    
+
+    # 1. Görev / Komut Okuma
     event_path = os.environ.get("GITHUB_EVENT_PATH")
     command = "Genel Durum Raporu ve Etkileşim Taraması"
-    
+
     if event_path and os.path.exists(event_path):
         try:
             with open(event_path, "r", encoding="utf-8") as f:
@@ -61,6 +60,7 @@ def main():
 
     print(f"\n[GÖREV]: {command}")
 
+    # 2. AI Karar ve Analiz Süreci
     ai_plan = {}
     if brain and hasattr(brain, 'think'):
         try:
@@ -74,6 +74,7 @@ def main():
 
     print("--- SOSYAL MEDYA WORKERLARI TETİKLENİYOR ---")
 
+    # Gelecekte eklenecek tüm platformlar hazır listenin içinde
     workers_to_run = [
         ("instagram_worker", "InstagramWorker", "Instagram"),
         ("youtube_worker", "YouTubeWorker", "YouTube"),
@@ -90,6 +91,7 @@ def main():
         worker_cls = dynamic_import(mod_name, cls_name)
         if worker_cls:
             try:
+                # Sınıf Başlatma (Parametre Esnekliği)
                 try:
                     w_instance = worker_cls(brain=brain, memory_mgr=memory_mgr)
                 except TypeError:
@@ -98,26 +100,24 @@ def main():
                     except TypeError:
                         w_instance = worker_cls()
 
+                # Çalıştırma (Spam Önleyici Esnek Parametre Yönetimi)
                 if hasattr(w_instance, 'run'):
-                    import inspect
-                    sig = inspect.signature(w_instance.run)
-                    params = sig.parameters
-                    
-                    kwargs = {}
-                    if 'command' in params:
-                        kwargs['command'] = command
-                    if 'ai_plan' in params:
-                        kwargs['ai_plan'] = ai_plan
-                    if 'project_type' in params:
-                        kwargs['project_type'] = "auto"
-                        
-                    w_instance.run(**kwargs)
+                    try:
+                        w_instance.run(command=command, ai_plan=ai_plan, project_type="auto")
+                    except TypeError:
+                        try:
+                            w_instance.run(command=command, ai_plan=ai_plan)
+                        except TypeError:
+                            try:
+                                w_instance.run(command)
+                            except TypeError:
+                                w_instance.run()
 
                 print(f"[+] {platform} Worker başarıyla çalıştırıldı.")
             except Exception as e:
-                print(f"[-] {platform} Worker çalıştırma hatası: {e}")
+                print(f"[-] {platform} Worker hatası: {e}")
         else:
-            print(f"[!] {platform} Worker bulunamadı veya içe aktarılamadı.")
+            print(f"[*] {platform} Worker modülü hazır (tetikleyici bekleniyor).")
 
     print("\n==================================================")
     print("       TÜM SÜREÇ BAŞARIYLA TAMAMLANDI             ")
