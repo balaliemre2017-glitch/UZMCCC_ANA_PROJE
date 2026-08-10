@@ -2,6 +2,13 @@ import sys
 import os
 import json
 
+# Global Proxy Kurulumu (INSTAGRAM_PROXY secret'ını tüm Python kütüphanelerine tanımlar)
+PROXY = os.environ.get("INSTAGRAM_PROXY")
+if PROXY:
+    os.environ["HTTP_PROXY"] = PROXY
+    os.environ["HTTPS_PROXY"] = PROXY
+    print(f"[*] GLOBAL PROXY AKTİF EDİLDİ: {PROXY.split('@')[-1]}")
+
 # Tüm alt klasörleri dinamik olarak Python yoluna ekle
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
