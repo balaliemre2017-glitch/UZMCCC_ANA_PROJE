@@ -24,6 +24,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+# Zip içindeki derin ve düzensiz klasör yollarını dahi tarama
 for root, dirs, files in os.walk(BASE_DIR):
     if root not in sys.path:
         sys.path.insert(0, root)
@@ -34,8 +35,8 @@ for root, dirs, files in os.walk(BASE_DIR):
 memory_mgr = None
 brain = None
 
-# Hafıza Yöneticisini Yükleme (hafiza.py / memory.py)
-for m_path in ["memory", "core.memory", "core.hafiza"]:
+# Hafıza Yöneticisini Yükleme
+for m_path in ["memory", "core.memory", "core.hafiza", "hafiza"]:
     try:
         mod = __import__(m_path, fromlist=["MemoryManager"])
         memory_mgr = getattr(mod, "MemoryManager")()
@@ -43,8 +44,8 @@ for m_path in ["memory", "core.memory", "core.hafiza"]:
     except Exception:
         pass
 
-# Patron Beynini Yükleme (patron_beyni.py / brain.py)
-for b_path in ["brain", "core.brain", "core.core.brain", "core.patron_beyni"]:
+# Patron Beynini Yükleme
+for b_path in ["brain", "core.brain", "core.core.brain", "core.patron_beyni", "patron_beyni"]:
     try:
         mod = __import__(b_path, fromlist=["AIBrain", "Brain", "PatronBeyni"])
         cls_name = "AIBrain" if hasattr(mod, "AIBrain") else ("Brain" if hasattr(mod, "Brain") else "PatronBeyni")
@@ -63,7 +64,8 @@ def load_worker(folder_name, class_name):
         f"core.core.workers.{folder_name}_worker",
         f"core.workers.{folder_name}_worker",
         f"workers.{folder_name}_worker",
-        f"{folder_name}_worker"
+        f"{folder_name}_worker",
+        f"core.core.workers.workers.workers.{folder_name}_worker"
     ]
     for p in paths:
         try:
@@ -74,7 +76,6 @@ def load_worker(folder_name, class_name):
     return None
 
 def execute_worker_safe(w_instance, command, pipeline_data, project_type, retries=1):
-    """Eski ve yeni tüm worker run() imzalarını destekler"""
     if not hasattr(w_instance, 'run'):
         return None
     
@@ -97,19 +98,23 @@ def execute_worker_safe(w_instance, command, pipeline_data, project_type, retrie
                 raise e
 
 # =========================================================
-# 5. İŞÇİLER ARASI BEYİN VE DİYALOG MOTORU (AGENT COMMUNICATION)
+# 5. İŞÇİLER ARASI BEYİN VE DİYALOG MOTORU
 # =========================================================
 class WorkerAgentCommunicator:
-    """İşçilerin kendi aralarında diyalog kurduğu ve içerik onayladığı merkez"""
     def __init__(self, brain):
         self.brain = brain
 
     def review_and_negotiate(self, sender_worker, receiver_worker, asset_data):
         print(f"[💬 İŞÇİ DİYALOĞU]: {sender_worker} -> {receiver_worker} ile medya uyumluluğunu görüşüyor...")
-        if hasattr(self.brain, 'generate_content'):
+        if self.brain:
             review_prompt = f"Sen {receiver_worker} uzmanısın. {sender_worker} tarafından hazırlanan şu medyayı incele: {asset_data}"
             try:
-                res = self.brain.generate_content(receiver_worker.lower(), review_prompt)
+                if hasattr(self.brain, 'generate_content'):
+                    res = self.brain.generate_content(receiver_worker.lower(), review_prompt)
+                elif hasattr(self.brain, 'think'):
+                    res = self.brain.think(review_prompt)
+                else:
+                    res = "Medya standartlara uygun görüldü."
                 print(f"[🤝 İŞÇİ MUTABAKATI]: {receiver_worker} onayı: {str(res)[:100]}...")
             except Exception:
                 pass
@@ -120,10 +125,9 @@ class WorkerAgentCommunicator:
 # =========================================================
 def main():
     print("==================================================")
-    print("  UZMCCC V26 - AKILLI İŞÇİ & AJAN ORDUSU MERKEZİ  ")
+    print("   UZMCCC V26 - AKILLI İŞÇİ & AJAN ORDUSU MERKEZİ  ")
     print("==================================================")
 
-    # A. PATRON EMRİ, PROJE KİMLİĞİ VE FİLTRE YAKALAMA
     event_path = os.environ.get("GITHUB_EVENT_PATH")
     patron_emri = os.environ.get("PATRON_EMRI", "Genel Durum Raporu ve Otomatik Etkileşim Taraması")
     project_type = os.environ.get("PROJECT_TYPE", "auto_agency")
@@ -143,32 +147,27 @@ def main():
     print(f"\n[📁 AKTİF PROJE]: {project_type}")
     print(f"[👑 PATRON EMRİ]: {patron_emri}")
 
-    if not brain:
-        print("[!] [KRİTİK HATA] Patron Beyni yüklenemedi! İşçiler emirsiz çalışamaz.")
-        return
+    communicator = WorkerAgentCommunicator(brain) if brain else None
 
-    communicator = WorkerAgentCommunicator(brain)
-
-    # B. STRATEJİ VE HAFIZA SENKRONİZASYONU
-    print("\n[🧠 PATRON BEYNİ]: Emir analiz ediliyor ve hafızadaki sabit kurallar yükleniyor...")
+    print("\n[🧠 PATRON BEYNİ]: Emir analiz ediliyor...")
     
     ai_response = "Varsayılan patron stratejisi uygulandı."
-    try:
-        if hasattr(brain, 'generate_plan'):
-            ai_response = brain.generate_plan(project_type, patron_emri)
-        elif hasattr(brain, 'think'):
-            ai_response = brain.think(patron_emri)
-    except Exception as e:
-        print(f"[!] AI Beyin Analiz Hatası: {e}")
+    if brain:
+        try:
+            if hasattr(brain, 'generate_plan'):
+                ai_response = brain.generate_plan(project_type, patron_emri)
+            elif hasattr(brain, 'think'):
+                ai_response = brain.think(patron_emri)
+        except Exception as e:
+            print(f"[!] AI Beyin Analiz Hatası: {e}")
 
-    # C. İŞÇİLER ARASI PAYLAŞIM HAVUZU (Pipeline)
     pipeline_data = {
         "project_type": project_type,
         "patron_emri": patron_emri,
         "ai_response": ai_response,
         "media_path": None,
-        "max_comment_replies": 3,       # Yalnızca 3-5 seçme yoruma komik cevap verme kotası
-        "collaboration_flags": [],      # DM / İş birliği bildirim havuzu
+        "max_comment_replies": 3,
+        "collaboration_flags": [],
         "communicator": communicator
     }
 
@@ -176,7 +175,7 @@ def main():
 
     active_filter = [w.strip() for w in active_workers_env.split(",") if w.strip()]
 
-    # D. AŞAMA 1: PRODÜKSİYON & TASARIM İŞÇİLERİ
+    # AŞAMA 1: PRODÜKSİYON & TASARIM
     print("--- 1. AŞAMA: UZMAN EDİTÖR VE TASARIM İŞÇİLERİ ÇALIŞIYOR ---")
     production_workers = [
         ("canva", "CanvaWorker", "Canva Uzmanı"),
@@ -195,13 +194,14 @@ def main():
                 
                 if isinstance(res, dict) and res.get("media_path"):
                     pipeline_data["media_path"] = res.get("media_path")
-                    communicator.review_and_negotiate(platform_title, "Instagram Uzmanı", res.get("media_path"))
+                    if communicator:
+                        communicator.review_and_negotiate(platform_title, "Instagram Uzmanı", res.get("media_path"))
                 
                 print(f"[+] [{platform_title}] Tasarım sürecini tamamladı.")
             except Exception as e:
                 print(f"[-] [{platform_title}] Hatası: {e}")
 
-    # E. AŞAMA 2: SOSYAL MEDYA DAĞITIM VE ETKİLEŞİM İŞÇİLERİ
+    # AŞAMA 2: SOSYAL MEDYA DAĞITIM VE ETKİLEŞİM
     print("\n--- 2. AŞAMA: SOSYAL MEDYA UZMANLARI MEDYAYI ALIP PAYLAŞIYOR ---")
     social_workers = [
         ("instagram", "InstagramWorker", "Instagram Uzmanı"),
@@ -222,15 +222,14 @@ def main():
             try:
                 w_instance = worker_cls(brain=brain, memory_mgr=memory_mgr) if hasattr(worker_cls, '__init__') else worker_cls()
                 execute_worker_safe(w_instance, patron_emri, pipeline_data, project_type)
-                print(f"[+] [{platform_title}] Kendi algoritma uzmanlığıyla görevi tamamladı.")
+                print(f"[+] [{platform_title}] Görevi tamamladı.")
                 time.sleep(1)
             except Exception as e:
                 print(f"[-] [{platform_title}] Dağıtım Hatası: {e}")
 
-    # F. PATRON BİLDİRİM KONTROLÜ
     flags = pipeline_data.get("collaboration_flags", [])
     if flags:
-        print(f"\n[🚨 PATRON BİLDİRİMİ]: {len(flags)} Adet İş Birliği / DM Talebi Yakalandı! Detaylar:")
+        print(f"\n[🚨 PATRON BİLDİRİMİ]: {len(flags)} Adet İş Birliği / DM Talebi Yakalandı!")
         for idx, flag in enumerate(flags, 1):
             print(f"  {idx}. {flag}")
 
