@@ -2,13 +2,22 @@ name: Otomatik Sosyal Medya Botu
 
 on:
   repository_dispatch:
-    types: [run_command]
+    types: [patron_cmd, run_command]  # Hem panelden gelen 'patron_cmd' hem de eski 'run_command' kabul edilir
   workflow_dispatch:
+    inputs:
+      command:
+        description: 'Patron Emri'
+        required: false
+        default: 'Genel Durum Raporu ve Otomatik Etkileşim Taraması'
+      project_type:
+        description: 'Proje Tipi'
+        required: false
+        default: 'auto_agency'
   schedule:
-    - cron: '0 9,18 * * *'
+    - cron: '0 9,18 * * *'  # Otomatik saatlik çalışma korundu
 
 jobs:
-  build:
+  run-bot:
     runs-on: ubuntu-latest
     steps:
       - name: Kodu Cek
@@ -26,6 +35,12 @@ jobs:
 
       - name: Botu Calistir
         env:
+          # Panelden Gelen Dinamik Veriler
+          PATRON_EMRI: ${{ github.event.client_payload.command || github.event.inputs.command || 'Genel Durum Raporu ve Otomatik Etkileşim Taraması' }}
+          PROJECT_TYPE: ${{ github.event.client_payload.project_type || github.event.inputs.project_type || 'auto_agency' }}
+          ACTIVE_WORKERS: ${{ github.event.client_payload.active_workers }}
+          
+          # GitHub Secrets (Gizli Şifreler & API Anahtarları)
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
