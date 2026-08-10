@@ -15,19 +15,19 @@ class InstagramWorker:
         self.session_file = "instagram_session.json"
 
     def login(self):
-        # 1. Öncelik: Session ID ile doğrudan, şifresiz/doğrulamasız giriş
+        # 1. Öncelik: Eklediğin INSTAGRAM_SESSIONID ile doğrudan giriş (CAPTCHA takılmaması için)
         if self.session_id:
             print("[*] Instagram Session ID ile çerez üzerinden giriş yapılıyor...")
             try:
                 self.cl.login_by_sessionid(self.session_id)
-                print("[+] Instagram Oturumu Çerezle Başarıyla Açıldı! (CAPTCHA / Robot Engeli Aşıldı)")
+                print("[+] Instagram Oturumu Çerezle Başarıyla Açıldı! (CAPTCHA ve Robot Engeli Aşıldı)")
                 return True
             except Exception as e:
                 print(f"[!] Session ID ile Giriş Hatası: {e} - Yedek kullanıcı adı/şifre moduna geçiliyor...")
 
-        # 2. Öncelik: Kullanıcı adı ve şifre ile klasik giriş (Yedek Plan)
+        # 2. Öncelik: Kullanıcı adı ve şifre ile yedek giriş
         if not self.username or not self.password:
-            print("[-] Instagram kullanıcı adı veya şifre/Session ID Secrets'ta bulunamadı!")
+            print("[-] Instagram kullanıcı adı, şifre veya Session ID Secrets'ta bulunamadı!")
             return False
 
         try:
@@ -49,7 +49,7 @@ class InstagramWorker:
         if not self.login():
             return False
 
-        # Patronun Emrini Okuma
+        # Patronun Emrini / AI Planını Okuma
         caption = "UZMCCC Otomatik Gönderi 🚀"
         if ai_plan and isinstance(ai_plan, dict) and "response" in ai_plan:
             caption = f"{ai_plan['response']}\n\n. \n#explore #reels #viral #instagram"
@@ -60,9 +60,9 @@ class InstagramWorker:
             with open(test_img_path, "wb") as handler:
                 handler.write(img_data)
 
-        # Anti-Spam İnsansı Bekleme
+        # Anti-Spam İnsansı Bekleme Simülasyonu
         time.sleep(random.uniform(3, 6))
-        
+
         try:
             print("[*] Patronun hazırladığı içerik Instagram'a yükleniyor...")
             media = self.cl.photo_upload(test_img_path, caption=caption)
