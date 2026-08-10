@@ -24,7 +24,7 @@ for m_path in ["memory", "core.memory", "core.hafiza"]:
 
 for b_path in ["brain", "core.brain", "core.core.brain", "core.patron_beyni"]:
     try:
-        mod = __import__(b_path, fromlist=["AIBrain", "PatronBeyni"]):
+        mod = __import__(b_path, fromlist=["AIBrain", "PatronBeyni"])
         cls_name = "AIBrain" if hasattr(mod, "AIBrain") else "PatronBeyni"
         BrainClass = getattr(mod, cls_name)
         brain = BrainClass(memory_mgr) if memory_mgr else BrainClass()
@@ -100,7 +100,6 @@ def main():
         worker_cls = load_worker(folder, cls_name)
         if worker_cls:
             try:
-                # Sınıf Başlatma Esnekliği
                 try:
                     w_instance = worker_cls(brain=brain, memory_mgr=memory_mgr)
                 except TypeError:
@@ -109,7 +108,6 @@ def main():
                     except TypeError:
                         w_instance = worker_cls()
 
-                # İnfaz (Patronun Emrini İşçiye Verme)
                 if hasattr(w_instance, 'run'):
                     try:
                         w_instance.run(command=command, ai_plan=ai_plan, project_type="auto")
