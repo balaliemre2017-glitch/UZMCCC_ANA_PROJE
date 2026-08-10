@@ -1,5 +1,5 @@
-import os
 import sys
+sys.path.append('.')
 import json
 
 from core.memory import MemoryManager
