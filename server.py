@@ -3,7 +3,7 @@ import sys
 import subprocess
 import logging
 from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 # --- 1. PROFESYONEL LOGLAMA SİSTEMİ ---
@@ -13,7 +13,14 @@ logger = logging.getLogger("UZMANCCC_API")
 app = Flask(__name__)
 CORS(app)  # Panelin (HTML) farklı portlardan veya IP'lerden istek atabilmesini sağlar
 
-# --- 2. SİSTEM DURUM KONTROLÜ (HEALTH CHECK) ---
+# --- 2. ANA SAYFAYI (PANELİ) DOĞRUDAN SUNMA (404 HATASINI BİTİREN KISIM) ---
+@app.route('/')
+def serve_index():
+    """127.0.0.1:5000 adresine girildiğinde index.html panelini ekrana getirir."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(base_dir, 'index.html')
+
+# --- 3. SİSTEM DURUM KONTROLÜ (HEALTH CHECK) ---
 @app.route('/api/status', methods=['GET'])
 def status_check():
     """Panelin sunucuyla bağlantısının stabil olup olmadığını kontrol ettiği uç nokta."""
@@ -23,7 +30,7 @@ def status_check():
         'sistem_saati': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }), 200
 
-# --- 3. ANA KOMUTA VE TETİKLEME MERKEZİ ---
+# --- 4. ANA KOMUTA VE TETİKLEME MERKEZİ ---
 @app.route('/api/komut-gonder', methods=['POST'])
 def komut_gonder():
     """Panelden gelen patron emirlerini alıp main.py motorunu arka planda tetikler."""
@@ -54,7 +61,6 @@ def komut_gonder():
             return jsonify({'hata': 'main.py motoru bulunamadı! Dizin yapısını kontrol edin.'}), 500
 
         # main.py motorunu arka planda asenkron olarak başlat 
-        # (Panelin donmamasını ve anında cevap almasını sağlar)
         subprocess.Popen(
             [python_cmd, main_py_path], 
             env=env,
@@ -74,8 +80,7 @@ if __name__ == '__main__':
     print("\n" + "="*60)
     print(" 🚀 UZMANCCC HOLDİNG - MERKEZİ API SUNUCUSU AKTİF")
     print(" 🛡️  Versiyon: V26 Otonom Dijital Ajans")
-    print(" 🌐 Panel Dinleniyor: http://0.0.0.0:5000")
+    print(" 🌐 Panel Adresi: http://127.0.0.1:5000")
     print("="*60 + "\n")
     
-    # Threaded=True sayesinde aynı anda birden fazla işçiden gelen istekleri çökmeden karşılar
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
