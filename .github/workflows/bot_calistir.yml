@@ -1,55 +1,32 @@
-name: Otomatik Sosyal Medya Botu
+name: UZMCCC Bot Otomasyonu
 
 on:
-  repository_dispatch:
-    types: [patron_cmd, run_command] 
-  workflow_dispatch:
-    inputs:
-      command:
-        description: 'Patron Emri'
-        required: false
-        default: 'Genel Durum Raporu ve Otomatik Etkileşim Taraması'
-      project_type:
-        description: 'Proje Tipi'
-        required: false
-        default: 'auto_agency'
+  push:
+    branches:
+      - main
   schedule:
-    - cron: '0 9,18 * * *' 
+    # Her gün sabah 09:00'da (UTC) otomatik çalıştır (Zamanı kendine göre ayarlayabilirsin)
+    - cron: '0 9 * * *'
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Kodu Cek
+      - name: Kodu Github'dan Çek (Checkout Repository)
         uses: actions/checkout@v3
 
-      - name: Python Kur
+      - name: Python Kurulumu
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Sistem Paketlerini Kur (Video Isleme Icin)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg libsm6 libxext6
-
-      - name: Bagimliliklari Yukle
+      - name: Bağımlılıkları Yükle (Requirements)
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Botu Calistir
-        env:
-          # Panelden Gelen Dinamik Veriler
-          PATRON_EMRI: ${{ github.event.client_payload.command || github.event.inputs.command || 'Genel Durum Raporu ve Otomatik Etkileşim Taraması' }}
-          PROJECT_TYPE: ${{ github.event.client_payload.project_type || github.event.inputs.project_type || 'auto_agency' }}
-          ACTIVE_WORKERS: ${{ github.event.client_payload.active_workers }}
-          
-          # GitHub Secrets (Gizli Şifreler & API Anahtarları)
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
-          INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
-          INSTAGRAM_SESSIONID: ${{ secrets.INSTAGRAM_SESSIONID }}
-          INSTAGRAM_PROXY: ${{ secrets.INSTAGRAM_PROXY }}
-          TIKTOK_SESSION_ID: ${{ secrets.TIKTOK_SESSION_ID }}
+      - name: UZMCCC Sistemini Başlat (Run Main)
         run: python main.py
+        env:
+          # Eğer ileride API anahtarları eklersen Github Secrets üzerinden buraya bağlayacağız
+          PYTHONUNBUFFERED: "1"
