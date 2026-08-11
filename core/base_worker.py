@@ -1,18 +1,23 @@
-import time
+# core/base_worker.py
+from abc import ABC, abstractmethod
+import logging
 
-class BaseWorker:
-    def __init__(self, name="Genel İşçi", role="Asistan", expertise="Genel Görevler", brain=None, memory_mgr=None):
-        self.name = name
-        self.role = role
-        self.expertise = expertise
-        self.brain = brain
-        self.memory_mgr = memory_mgr
+class BaseWorker(ABC):
+    def __init__(self, platform_name):
+        self.platform_name = platform_name
+        self.is_authenticated = False
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    def think_and_analyze(self, prompt):
-        if self.brain:
-            return self.brain.generate_response(prompt)
-        return f"[{self.name}] Analiz edildi: {prompt}"
+    @abstractmethod
+    def authenticate(self):
+        """Platforma giriş yapma ve API'ye bağlanma işlemi."""
+        pass
 
-    def run(self, command=None, ai_plan=None, project_type="auto", *args, **kwargs):
-        print(f"[{self.name}] Görev yürütülüyor...")
-        return True
+    @abstractmethod
+    def execute_task(self, task_data):
+        """Platforma özel görevi (post atma, video yükleme vb.) yerine getirme."""
+        pass
+
+    def log_status(self, message):
+        """İşlemleri terminale veya log dosyasına yazdırma."""
+        logging.info(f"[{self.platform_name.upper()} WORKER] : {message}")
