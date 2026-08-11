@@ -1,30 +1,45 @@
+# core/memory.py
 import json
 import os
+import logging
 
-class MemoryManager:
-    def __init__(self, storage_file="system_memory.json"):
-        self.storage_file = storage_file
-        self.memory = self.load_memory()
+class Memory:
+    def __init__(self, db_file="uzmccc_memory.json"):
+        self.db_file = db_file
+        self.data = {"history": [], "pending_tasks": []}
+        self._load_memory()
 
-    def load_memory(self):
-        if os.path.exists(self.storage_file):
+    def _load_memory(self):
+        """Hafıza dosyasını okur, yoksa sıfırdan oluşturur."""
+        if not os.path.exists(self.db_file):
+            self._save_memory()
+        else:
             try:
-                with open(self.storage_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                return {}
-        return {}
+                with open(self.db_file, 'r', encoding='utf-8') as f:
+                    self.data = json.load(f)
+            except json.JSONDecodeError:
+                logging.error("Hafıza dosyası bozuk, sıfırlanıyor...")
+                self._save_memory()
 
-    def save_memory(self):
-        try:
-            with open(self.storage_file, "w", encoding="utf-8") as f:
-                json.dump(self.memory, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            print(f"[-] Hafıza kayıt hatası: {e}")
+    def _save_memory(self):
+        """Mevcut durumu JSON dosyasına kaydeder."""
+        with open(self.db_file, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, indent=4)
 
-    def remember(self, key, value):
-        self.memory[key] = value
-        self.save_memory()
+    def add_task(self, task):
+        """Yapılacak yeni bir görev ekler."""
+        task['status'] = 'PENDING'
+        self.data["pending_tasks"].append(task)
+        self._save_memory()
 
-    def recall(self, key, default=None):
-        return self.memory.get(key, default)
+    def get_pending_tasks(self):
+        """Bekleyen görevleri getirir."""
+        return [t for t in self.data["pending_tasks"] if t.get('status') == 'PENDING']
+
+    def mark_completed(self, task):
+        """Görevi tamamlandı olarak işaretler ve geçmişe taşır."""
+        if task in self.data["pending_tasks"]:
+            self.data["pending_tasks"].remove(task)
+            task['status'] = 'COMPLETED'
+            self.data["history"].append(task)
+            self._save_memory()
