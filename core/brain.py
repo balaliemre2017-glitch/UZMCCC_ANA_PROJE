@@ -1,46 +1,53 @@
 # core/brain.py
+import os
 import time
+import importlib
 import logging
 from core.memory import Memory
-from workers.capcut.worker import CapCutWorker
-from workers.youtube.worker import YouTubeWorker
-from workers.tiktok.worker import TikTokWorker
 
 class Brain:
     def __init__(self):
         print("\n=======================================================")
-        print("  UZMCCC V26 - TAM OTOMATIK SOSYAL MEDYA SISTEMI AKTIF ")
+        print("    UZMCCC - TAM OTOMATİK SOSYAL MEDYA YÖNETİM BOTU    ")
         print("=======================================================\n")
         
         self.memory = Memory()
-        # Sisteme bağlı tüm bağımsız platform yöneticileri
-        self.workers = {
-            "capcut": CapCutWorker(),
-            "youtube": YouTubeWorker(),
-            "tiktok": TikTokWorker()
-            # Yeni platformlar eklendikçe buraya yazılacak
-        }
+        self.workers = {}
+        self._load_all_workers()
+
+    def _load_all_workers(self):
+        """Workers klasöründeki tüm bağımsız platform işçilerini otomatik bulur ve yükler."""
+        workers_dir = os.path.join(os.path.dirname(__file__), '..', 'workers')
+        
+        for folder_name in os.listdir(workers_dir):
+            folder_path = os.path.join(workers_dir, folder_name)
+            if os.path.isdir(folder_path) and not folder_name.startswith('__'):
+                worker_file = os.path.join(folder_path, 'worker.py')
+                if os.path.exists(worker_file):
+                    try:
+                        # Modülü dinamik olarak içe aktar
+                        module_name = f"workers.{folder_name}.worker"
+                        module = importlib.import_module(module_name)
+                        
+                        # Modül içindeki işçi sınıfını bul (örnek: TiktokWorker, CapcutWorker)
+                        class_name = "".join([word.capitalize() for word in folder_name.split('_')]) + "Worker"
+                        worker_class = getattr(module, class_name)
+                        
+                        # İşçiyi sisteme kaydet
+                        self.workers[folder_name.lower()] = worker_class()
+                        logging.info(f"[SİSTEM] {class_name} başarıyla sisteme entegre edildi.")
+                    except Exception as e:
+                        logging.error(f"[SİSTEM HATA] {folder_name} işçisi yüklenemedi: {e}")
 
     def assign_task(self, platform, action, payload):
-        """Sisteme dışarıdan yeni görev atamak için kullanılır."""
-        task = {
-            "platform": platform,
-            "action": action,
-            "payload": payload,
-            "timestamp": time.time()
-        }
+        task = {"platform": platform.lower(), "action": action, "payload": payload, "timestamp": time.time()}
         self.memory.add_task(task)
-        logging.info(f"[BEYIN] Yeni görev hafızaya eklendi: {platform.upper()} -> {action}")
+        logging.info(f"[BEYİN] Görev eklendi: {platform.upper()} -> {action}")
 
     def run_system(self):
-        """Hafızadaki bekleyen tüm görevleri sırasıyla işler."""
         pending_tasks = self.memory.get_pending_tasks()
-        
         if not pending_tasks:
-            logging.info("[BEYIN] Bekleyen görev yok. Sistem dinleniyor...")
             return
-
-        logging.info(f"[BEYIN] Hafızadan {len(pending_tasks)} görev işlenmeye başlanıyor...")
 
         for task in pending_tasks:
             platform_name = task["platform"]
@@ -49,23 +56,12 @@ class Brain:
             if worker:
                 if not worker.is_authenticated:
                     worker.authenticate()
-                
                 try:
-                    # Görevi işçiye yaptır
                     success = worker.execute_task(task)
-                    
                     if success:
                         self.memory.mark_completed(task)
-                        logging.info(f"[BEYIN] Görev Başarılı: {platform_name.upper()}")
-                    else:
-                        logging.error(f"[BEYIN] Görev Başarısız Oldu: {platform_name.upper()}")
-                
                 except Exception as e:
-                    logging.error(f"[BEYIN HATA] Kritik Çökme ({platform_name}): {str(e)}")
+                    logging.error(f"[BEYİN] Kritik Çökme ({platform_name}): {str(e)}")
             else:
-                logging.warning(f"[BEYIN UYARI] '{platform_name}' için bir işçi (worker) bulunamadı. Görev atlanıyor.")
-            
-            # Platformların API limitlerine (Spam/Rate Limit) takılmamak için güvenlik beklemesi
-            time.sleep(3) 
-
-        logging.info("[BEYIN] Görev kuyruğu başarıyla tamamlandı.")
+                logging.warning(f"[BEYİN] '{platform_name}' için aktif bir işçi yok!")
+            time.sleep(2)
