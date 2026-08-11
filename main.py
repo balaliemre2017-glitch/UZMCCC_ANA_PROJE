@@ -1,20 +1,36 @@
 # main.py
+import logging
 from core.brain import Brain
 
+# Terminal ekranının temiz ve anlaşılır görünmesi için log ayarları
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%H:%M:%S')
+
 def main():
-    print("=======================================")
-    print("      UZMCCC OTOMATIK SOSYAL MEDYA     ")
-    print("           YONETIM SISTEMI             ")
-    print("=======================================")
+    uzmccc_bot = Brain()
     
-    uzmccc_brain = Brain()
+    # 1. GÖREV: CapCut'a 9:16 dikey formatta, UZMANÇ filigranlı arabesk rap konseptli video ürettir.
+    uzmccc_bot.assign_task(
+        platform="capcut", 
+        action="render_vertical_video", 
+        payload={
+            "concept": "arabesk rap klip",
+            "ratio": "9:16",
+            "watermark": "UZMANÇ"
+        }
+    )
     
-    # Test Görevleri Ekleyelim
-    uzmccc_brain.add_task("instagram", "post_reel", "doga_manzarasi.mp4")
-    uzmccc_brain.add_task("youtube", "upload_shorts", "doga_manzarasi_shorts.mp4")
+    # 2. GÖREV: Üretilen bu videoyu TikTok'a yükle.
+    uzmccc_bot.assign_task(
+        platform="tiktok",
+        action="upload_video",
+        payload={
+            "file_path": "output_video.mp4",
+            "description": "Yeni parça yayında! #arabesk #rap #uzmccc"
+        }
+    )
     
-    # Sistemi Ateşle
-    uzmccc_brain.run_system()
+    # Sistemi Ateşle (Hafızadaki tüm görevleri sırasıyla yapacak)
+    uzmccc_bot.run_system()
 
 if __name__ == "__main__":
     main()
