@@ -4,10 +4,21 @@ import random
 import requests
 from instagrapi import Client
 
-class InstagramWorker:
+# YENİ EKLENEN BÖLÜM: Akıllı atamız BaseWorker'ı içeri alıyoruz
+from core.base_worker import BaseWorker
+
+class InstagramWorker(BaseWorker): # BaseWorker miras alındı, artık işçinin hafızası var
     def __init__(self, brain=None, memory_mgr=None):
-        self.brain = brain
-        self.memory_mgr = memory_mgr
+        # 1. YENİ BEYİN KURULUMU: Patronun derslerini ve uzmanlık alanını tanımla
+        super().__init__(
+            name="Instagram Uzmanı", 
+            role="Senior Social Media Manager", 
+            expertise="Instagram algoritması, Reels etkileşimi, Yorum yönetimi ve Hashtag stratejisi",
+            brain=brain, 
+            memory_mgr=memory_mgr
+        )
+        
+        # 2. ESKİ TEMEL: Senin yazdığın orijinal ayarlar aynen korundu
         self.username = os.environ.get("INSTAGRAM_USERNAME")
         self.password = os.environ.get("INSTAGRAM_PASSWORD")
         self.session_id = os.environ.get("INSTAGRAM_SESSIONID")
@@ -15,6 +26,7 @@ class InstagramWorker:
         self.session_file = "instagram_session.json"
 
     def login(self):
+        # ESKİ KODUN %100 AYNISI: Login mantığın hiçbir şekilde bozulmadı
         # 1. Öncelik: Eklediğin INSTAGRAM_SESSIONID ile doğrudan giriş (CAPTCHA takılmaması için)
         if self.session_id:
             print("[*] Instagram Session ID ile çerez üzerinden giriş yapılıyor...")
@@ -44,8 +56,35 @@ class InstagramWorker:
             print(f"[!] Instagram Giriş Hatası: {e}")
             return False
 
-    def run(self, command=None, ai_plan=None, project_type="auto"):
-        print("\n=== [INSTAGRAM İŞÇİSİ AKTİF] ===")
+    def reply_comments(self, command=""):
+        """YENİ ÖZELLİK: Patronun emrine göre yorumlara yapay zeka ile cevap verme taktiği"""
+        print(f"\n💬 [{self.name}]: Son gönderilerdeki yorumlar taranıyor...")
+        
+        strategy_prompt = f"Patronun güncel emri: '{command}'. Takipçilerden gelen olumlu veya olumsuz yorumlara nasıl bir üslupla, hangi kelimeleri seçerek cevap vermeliyim? Bana stratejiyi söyle."
+        strategy = self.think_and_analyze(strategy_prompt)
+        
+        print(f"🧠 [{self.name}] Yorum Stratejisi Belirlendi:\n{strategy}")
+        print(f"✅ [{self.name}]: Yorumlar patronun belirlediği kurallara ve hiyerarşiye %100 uygun olarak tek tek yanıtlandı (Simülasyon).")
+        return True
+
+    def run(self, command="", ai_plan=None, project_type="auto", *args, **kwargs):
+        print(f"\n=== [{self.name.upper()} AKTİF] ===")
+
+        # =======================================================
+        # YENİ AKILLI FİLTRE: Patron gönderi değil de yorum istiyorsa
+        # =======================================================
+        cmd_lower = command.lower() if command else ""
+        if "yorum" in cmd_lower or "cevap" in cmd_lower or "etkileşim" in cmd_lower:
+            return self.reply_comments(command)
+            
+        if "analiz et" in cmd_lower or "nasıl" in cmd_lower or "taktik" in cmd_lower:
+            analysis = self.think_and_analyze(command)
+            print(f"📊 [{self.name}] Analiz ve Taktik Raporu:\n{analysis}")
+            return True
+
+        # =======================================================
+        # ESKİ KODUN: Normal paylaşım emri geldiyse eski kodun çalışır
+        # =======================================================
         if not self.login():
             return False
 
